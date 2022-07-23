@@ -9,6 +9,7 @@ namespace percentCool
 {
     internal class Program
     {
+        public static Random random = new Random();
         public static bool skipIfStmt = false;
         public static Dictionary<string, string> variables = new Dictionary<string, string>();
         public static string version = "1.01";
@@ -16,6 +17,7 @@ namespace percentCool
         public static string url = "http://localhost:8000/";
         public static int pageViews = 0;
         public static int requestCount = 0;
+        public static int randMax = 10;
         public static bool doingPercent = false;
         public static string pageData =
             "<!DOCTYPE>" +
@@ -39,7 +41,7 @@ namespace percentCool
         }
         public static string Format(string toFormat)
         {
-            return toFormat.Replace("$", pageData).Replace("%%", "&#x25;").Replace("%", version);
+            return toFormat.Replace("$", pageData).Replace("%%", "&#x25;").Replace("%", version).Replace("\\rnd", random.Next(1,randMax).ToString());
         }
         public static void FormattedPrint(string toPrint)
         {
@@ -100,6 +102,14 @@ namespace percentCool
                             pageData += line.Substring(5);
                         }
                     }
+                    // Set random max
+                    else if (line.StartsWith("rndmax "))  // Rndmax
+                    {
+                        if (line.Split(" ").Length > 0)
+                        {
+                            randMax = int.Parse(line.Split(" ")[1]);
+                        }
+                    }
                     // Unlink deletes a file, use with caution!
                     else if (line.StartsWith("unlink "))
                     {
@@ -116,7 +126,15 @@ namespace percentCool
                     }
                     else if (line.Substring(0, 1) == "$")
                     {
-                        if (line.Contains("="))
+                        if (line.Contains("@=="))
+                        {
+                            if (isVariable(line.Substring(1).Split("@==")[0].Replace(" ", "")))
+                            {
+                                variables.Remove(line.Substring(1).Split("@==")[0].Replace(" ", ""));
+                            }
+                            variables.Add(line.Substring(1).Split("@==")[0].Replace(" ", ""), Format(line.Split("@==")[1].TrimStart()));
+                        }
+                        else if (line.Contains("="))
                         {
                             if (isVariable(line.Substring(1).Split("=")[0].Replace(" ", "")))
                             {
@@ -177,6 +195,8 @@ namespace percentCool
 
             while (runServer)
             {
+                variables.Clear();
+                randMax = 0;
                 // Will wait here until we hear from a connection
                 HttpListenerContext ctx = await listener.GetContextAsync();
 
@@ -196,7 +216,6 @@ namespace percentCool
                 {
                     pageData = "";
                     ParseCOOL(System.IO.File.ReadAllText(req.Url.AbsolutePath.Substring(1)));
-                    variables.Clear();
                 }
 
                 // Write the response info
