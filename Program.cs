@@ -20,6 +20,9 @@ namespace percentCool
         public static int randMax = 10;
         public static bool doingPercent = false;
         public static string where = "";
+
+        static int i;       // For line numbers in errors, and arrays.
+
         public static string pageData =
             "<!DOCTYPE>" +
             "<html>" +
@@ -27,10 +30,40 @@ namespace percentCool
             "    <p>HTTP 404 NOT Found</p>" +
             "  </body>" +
             "</html>";
+        /// <summary>
+        /// Check if source is a multiple of multiple
+        /// </summary>
+        /// <param name="source">The number to check</param>
+        /// <param name="multiple">The multiple of</param>
+        /// <returns></returns>
+        public static bool IsMultipleOf(int source, int multiple)
+        {
+            return (source % multiple) == 0;
+        }
+        public static string GetRequestPostData(HttpListenerRequest request)
+        {
+            // https://stackoverflow.com/questions/5197579/getting-form-data-from-httplistenerrequest
+            if (!request.HasEntityBody)
+            {
+                return null;
+            }
+            using (System.IO.Stream body = request.InputStream) // here we have data
+            {
+                using (var reader = new System.IO.StreamReader(body, request.ContentEncoding))
+                {
+                    return reader.ReadToEnd();
+                }
+            }
+        }
+        /// <summary>
+        /// Display error message
+        /// </summary>
+        /// <param name="errorReason">The error message</param>
         public static void Error(string errorReason)    // Error
         {
-            pageData = "percentCool error: " + errorReason;
+            pageData = "percentCool error: " + errorReason + " at line " + (i + 1).ToString();
         }
+
         // Check if a string is a variable name
         public static bool isVariable(string name)
         {
@@ -40,19 +73,34 @@ namespace percentCool
             }
             return false;
         }
+        /// <summary>
+        /// Formats a string using a weird formatting thing
+        /// </summary>
+        /// <param name="toFormat">The string to format</param>
+        /// <returns></returns>
         public static string Format(string toFormat)
         {
-            return toFormat.Replace("$", pageData).Replace("%%", "&#x25;").Replace("%", version).Replace("\\rnd", random.Next(1,randMax).ToString());
+            return toFormat.Replace("$", pageData).Replace("%%", "&#x25;").Replace("%", version).Replace("\\rnd", random.Next(0, randMax).ToString());
         }
         public static void FormattedPrint(string toPrint)
         {
             pageData += Format(toPrint);
         }
         // Parse COOL code
-        public static void ParseCOOL(string code)
+        public static void ParseCOOL(string code, HttpListenerRequest req)
         {
+            string reqs = GetRequestPostData(req);
+            if (reqs != null)                       // Get post request into variable
+            {
+                string[] eq = reqs.Split("&");
+                foreach (string eqStr in eq)
+                {
+                    string[] nd = eqStr.Split("=");
+                    variables.Add(nd[0], nd[1]);
+                }
+            }
             bool firstPercent;
-            for (int i = 0; i < code.Split(new char[] { '\n' }).Length; i++)
+            for (i = 0; i < code.Split(new char[] { '\n' }).Length; i++)
             {
                 string line = code.Split(new char[] { '\n' })[i].Replace("\r", "").Replace("\t", " ").Trim();
                 line = Regex.Replace(line, @"\s+", " ");
@@ -65,6 +113,10 @@ namespace percentCool
                             skipIfStmt = false;
                         }
                     }
+                    continue;
+                }
+                if (string.IsNullOrEmpty(line))
+                {
                     continue;
                 }
                 firstPercent = false;
@@ -143,6 +195,11 @@ namespace percentCool
                             }
                             variables.Add(line.Substring(1).Split("=")[0].Replace(" ", ""), line.Split("=")[1].TrimStart());
                         }
+                        else
+                        {
+                            Error("Invalid argument for variable");
+                            return;
+                        }
                     }
                     // Here comes the if statement...
                     else if (line.StartsWith("if"))
@@ -151,7 +208,7 @@ namespace percentCool
                         {
                             string toCheck = line.Substring(3).Split("=")[0].TrimEnd();        // Just some stuff that makes
                                                                                                // it contain the first argument
-                            if (line.Substring(3,1) == "$" && isVariable(line.Substring(4).Split("=")[0].Trim()))
+                            if (line.Substring(3, 1) == "$" && isVariable(line.Substring(4).Split("=")[0].Trim()))
                             {
                                 string varcont;
                                 variables.TryGetValue(line.Substring(4).Split("=")[0].TrimEnd(), out varcont);
@@ -180,7 +237,7 @@ namespace percentCool
                     {
                         doingPercent = false;
                     }
-                    else { Error("Unknown statement " + line); }
+                    else { Error("Unknown statement " + line); return; }
                 }
                 else
                 {
@@ -216,7 +273,7 @@ namespace percentCool
                 if (System.IO.File.Exists(req.Url.AbsolutePath.Substring(1)))
                 {
                     pageData = "";
-                    ParseCOOL(System.IO.File.ReadAllText(req.Url.AbsolutePath.Substring(1)));
+                    ParseCOOL(System.IO.File.ReadAllText(req.Url.AbsolutePath.Substring(1)), req);
                     where = req.Url.AbsolutePath.Substring(1).Split(".")[1];
                 }
                 else if (req.Url.AbsolutePath.Substring(1) == "")
@@ -224,12 +281,13 @@ namespace percentCool
                     if (System.IO.File.Exists("index.cool"))
                     {
                         pageData = "";
-                        ParseCOOL(System.IO.File.ReadAllText("index.cool"));
+                        ParseCOOL(System.IO.File.ReadAllText("index.cool"), req);
                         where = "cool";
-                    } else if (System.IO.File.Exists("index.html"))
+                    }
+                    else if (System.IO.File.Exists("index.html"))
                     {
                         pageData = "";
-                        ParseCOOL(System.IO.File.ReadAllText("index.html"));
+                        ParseCOOL(System.IO.File.ReadAllText("index.html"), req);
                         where = "html";
                     }
                 }
@@ -240,7 +298,8 @@ namespace percentCool
                 if (where == "html" || where == "cool")
                 {
                     resp.ContentType = "text/html";
-                } else if (where == "png")
+                }
+                else if (where == "png")
                 {
                     resp.ContentType = "image/png";
                 }
