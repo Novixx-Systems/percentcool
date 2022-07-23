@@ -139,6 +139,12 @@ namespace percentCool
                                 toCheck = varcont;
                             }
                             string secondCheck = line.Substring(3).Split("=")[1].TrimStart();        // The thing to compare to
+                            if (line.Split("=")[1].Trim().Substring(0, 1) == "$" && isVariable(line.Substring(4).Split("=")[1].Trim().Substring(1)))
+                            {
+                                string varcont;
+                                variables.TryGetValue(line.Substring(4).Split("=")[1].Trim().Substring(1), out varcont);
+                                secondCheck = varcont;
+                            }
                             if (toCheck != secondCheck)
                             {
                                 skipIfStmt = true;
