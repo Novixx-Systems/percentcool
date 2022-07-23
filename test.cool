@@ -1,0 +1,16 @@
+<%cool
+// This sample echos the values in
+// the form, except for "dok"
+// If dok is lmao, it echoes aha.
+echo $ok
+if $dok = lmao
+echo aha
+stopif
+echo $daok
+%>
+<form method="post">
+<input type="text" name="ok">
+<input type="text" name="dok">
+<input type="text" name="daok">
+<input type="submit">
+</form>
