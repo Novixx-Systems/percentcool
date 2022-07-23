@@ -22,10 +22,11 @@ namespace percentCool
             "    <p>HTTP 500 Server Error</p>" +
             "  </body>" +
             "</html>";
-        public static void Error(string errorReason)
+        public static void Error(string errorReason)    // Error
         {
             pageData = "percentCOOL error: " + errorReason;
         }
+        // Check if a string is a variable name
         public static bool isVariable(string name)
         {
             if (variables.ContainsKey(name))
@@ -51,25 +52,27 @@ namespace percentCool
                 firstPercent = false;
                 if (line.StartsWith("<%cool"))
                 {
-                    doingPercent = true;
+                    doingPercent = true;            // Enter percent mode
                     firstPercent = true;
                 }
-                if (doingPercent && !firstPercent)
+                if (doingPercent && !firstPercent)              // If we are in percent mode...
                 {
-                    if (line.StartsWith("$="))
+                    if (line.StartsWith("$="))  // Echo (formatted)
                     {
                         if (line.Substring(2, 1) == "$" && isVariable(line.Substring(3).Replace(" ", "").Replace("\r", "")))
                         {
+                            // Print formatted string
                             string varcont = null;
                             variables.TryGetValue(line.Substring(3).Replace(" ", "").Replace("\r", ""), out varcont);
                             FormattedPrint(varcont);
                         }
                         else
                         {
+                            // Print formatted string
                             FormattedPrint(line.Substring(2));
                         }
                     }
-                    else if (line.StartsWith("echo "))
+                    else if (line.StartsWith("echo "))  // Echo
                     {
                         if (line.Substring(5, 1) == "$" && isVariable(line.Substring(6).Replace(" ", "").Replace("\r", "")))
                         {
@@ -82,6 +85,7 @@ namespace percentCool
                             pageData += line.Substring(5);
                         }
                     }
+                    // Unlink deletes a file, use with caution!
                     else if (line.StartsWith("unlink "))
                     {
                         if (line.Substring(7, 1) == "$" && isVariable(line.Substring(8).Replace(" ", "").Replace("\r", "")))
