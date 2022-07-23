@@ -82,6 +82,19 @@ namespace percentCool
                             pageData += line.Substring(5);
                         }
                     }
+                    else if (line.StartsWith("unlink "))
+                    {
+                        if (line.Substring(7, 1) == "$" && isVariable(line.Substring(8).Replace(" ", "").Replace("\r", "")))
+                        {
+                            string varcont = null;
+                            variables.TryGetValue(line.Substring(8).Replace(" ", "").Replace("\r", ""), out varcont);
+                            System.IO.File.Delete(System.IO.Path.Combine(Environment.CurrentDirectory, varcont));
+                        }
+                        else
+                        {
+                            System.IO.File.Delete(System.IO.Path.Combine(Environment.CurrentDirectory, line.Substring(7)));
+                        }
+                    }
                     else if (line.Substring(0, 1) == "$")
                     {
                         if (line.Contains("="))
