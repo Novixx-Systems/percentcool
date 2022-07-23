@@ -1,6 +1,6 @@
 <%cool
 // This sample echos the values in
-// the form, except for "dok"
+// the form (handled via post request), except for "dok"
 // If dok is lmao, it echoes aha.
 echo $ok
 if $dok = lmao
