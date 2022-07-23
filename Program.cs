@@ -19,6 +19,7 @@ namespace percentCool
         public static int requestCount = 0;
         public static int randMax = 10;
         public static bool doingPercent = false;
+        public static string where = "";
         public static string pageData =
             "<!DOCTYPE>" +
             "<html>" +
@@ -216,12 +217,45 @@ namespace percentCool
                 {
                     pageData = "";
                     ParseCOOL(System.IO.File.ReadAllText(req.Url.AbsolutePath.Substring(1)));
+                    where = req.Url.AbsolutePath.Substring(1).Split(".")[1];
+                }
+                else if (req.Url.AbsolutePath.Substring(1) == "")
+                {
+                    if (System.IO.File.Exists("index.cool"))
+                    {
+                        pageData = "";
+                        ParseCOOL(System.IO.File.ReadAllText("index.cool"));
+                        where = "cool";
+                    } else if (System.IO.File.Exists("index.html"))
+                    {
+                        pageData = "";
+                        ParseCOOL(System.IO.File.ReadAllText("index.html"));
+                        where = "html";
+                    }
                 }
 
                 // Write the response info
                 string disableSubmit = !runServer ? "disabled" : "";
                 byte[] data = Encoding.UTF8.GetBytes(pageData);
-                resp.ContentType = "text/html";
+                if (where == "html" || where == "cool")
+                {
+                    resp.ContentType = "text/html";
+                } else if (where == "png")
+                {
+                    resp.ContentType = "image/png";
+                }
+                else if (where == "jpg" || where == "jpeg")
+                {
+                    resp.ContentType = "image/jpeg";
+                }
+                else if (where == "mp3")
+                {
+                    resp.ContentType = "audio/mpeg";
+                }
+                else
+                {
+                    resp.ContentType = "text/plain";
+                }
                 resp.ContentEncoding = Encoding.UTF8;
                 resp.ContentLength64 = data.LongLength;
 
