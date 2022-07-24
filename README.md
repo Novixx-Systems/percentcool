@@ -1,6 +1,9 @@
 # percentcool
 percentCool is a programming language for creating websites.
 
+# Requirements for compiling
+You need the MySql.Data NuGet package
+
 # Tutorial
 This is a tutorial on how to program in percentCool, this tutorial is a work-in-progress.
 
