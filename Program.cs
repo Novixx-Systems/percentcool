@@ -8,13 +8,20 @@ using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using MySql.Data.MySqlClient;
+using System.Linq;
 
 namespace percentCool
 {
     internal class Program
     {
         public static Random random = new();
-        public static bool skipIfStmt = false;
+        public static bool skipIfStmtElse = false;
+        public static bool skipElseStmt = false;
+        public static bool skipElseStmtB = false;
+        public static bool inLoop = false;
+        public static string loopThrough;
+        public static int loopCount = 0;
+        public static int savedLoopInt = 0;
         public static Dictionary<string, string> variables = new();
         public static Dictionary<string, List<string>> arrays = new();
         public static string version = "1.01";
@@ -121,6 +128,10 @@ namespace percentCool
 
             Console.WriteLine("Query Started.");
             string query = cmad;
+            for (int i = 0; i < variables.Values.Count; i++)
+            {
+                query = query.Replace("$" + variables.ElementAt(i).Key, variables.ElementAt(i).Value);
+            }
 
             if (query.ToUpper().StartsWith("SELECT"))
             {
@@ -249,7 +260,7 @@ namespace percentCool
                 foreach (string eqStr in eq)
                 {
                     string[] nd = eqStr.Split("=");
-                    variables.Add(nd[0], nd[1]);
+                    variables.Add(nd[0], nd[1].Replace("+", " "));
                 }
             }
             bool firstPercent;
@@ -257,16 +268,69 @@ namespace percentCool
             {
                 string line = code.Split(new char[] { '\n' })[i].Replace("\r", "").Replace("\t", " ").Trim();
                 line = Regex.Replace(line, @"\s+", " ");
-                if (skipIfStmt)
+                if (skipIfStmtElse)
                 {
                     if (doingPercent)
                     {
-                        if (line == "stopif")
+                        if (line == "else")
                         {
-                            skipIfStmt = false;
+                            skipIfStmtElse = false;
+                        }
+                        else if (line == "stopif")
+                        {
+                            skipIfStmtElse = false;
                         }
                     }
                     continue;
+                }
+                if (inLoop)
+                {
+                    if (doingPercent)
+                    {
+                        if (line == "stoploop")
+                        {
+                            if (loopCount >= arrays[loopThrough[1..]].Count-1)
+                            {
+                                inLoop = false;
+                                savedLoopInt = 0;
+                            }
+                            else
+                            {
+                                loopCount++;
+                                i -= savedLoopInt;
+                                i--;
+                                savedLoopInt = 0;
+                                if (isVariable("i"))
+                                {
+                                    variables.Remove("i");
+                                }
+                                variables.Add("i", arrays[loopThrough[1..]][loopCount]);
+                            }
+                        }
+                        else
+                        {
+                            savedLoopInt++;
+                        }
+                    }
+                }
+                if (skipElseStmt)
+                {
+                    if (doingPercent)
+                    {
+                        if (line == "else")
+                        {
+                            skipElseStmtB = true;
+                        }
+                        if (line == "stopif")
+                        {
+                            skipElseStmtB = false;
+                            skipElseStmt = false;
+                        }
+                    }
+                    if (skipElseStmtB)
+                    {
+                        continue;
+                    }
                 }
                 if (string.IsNullOrEmpty(line))
                 {
@@ -379,6 +443,11 @@ endOfDefine:
                                 toCheck = varcont;
                             }
                             string secondCheck = line[3..].Split("=")[1].TrimStart();        // The thing to compare to
+                            if (line.Split("=")[1].Trim() == "NULL" && !isVariable(line[4..].Split("=")[0].Trim()))
+                            {
+                                toCheck = null;
+                                secondCheck = null;
+                            }
                             if (line.Split("=")[1].Trim()[..1] == "$" && isVariable(line[4..].Split("=")[1].Trim()[1..]))
                             {
                                 variables.TryGetValue(line[4..].Split("=")[1].Trim()[1..], out string varcont);
@@ -386,7 +455,46 @@ endOfDefine:
                             }
                             if (toCheck != secondCheck)
                             {
-                                skipIfStmt = true;
+                                skipIfStmtElse = true;
+                            }
+                            else
+                            {
+                                skipElseStmt = true;
+                            }
+                        }
+                    }
+                    else if (line.StartsWith("foreach"))
+                    {
+                        if (line.Split(" ").Length > 1)
+                        {
+                            if (line.Split(" ")[1][..1] == "$")
+                            {
+                                if (isArray(line.Split(" ")[1][1..]))
+                                {
+                                    loopThrough = line.Split(" ")[1];
+                                    if (arrays[loopThrough[1..]].Count > 0)
+                                    {
+                                        loopCount = 0;
+
+                                        inLoop = true;
+
+                                        if (isVariable("i"))
+                                        {
+                                            variables.Remove("i");
+                                        }
+                                        variables.Add("i", arrays[loopThrough[1..]][loopCount]);
+                                    }
+                                }
+                                else
+                                {
+                                    Error("Not an array");
+                                    return;
+                                }
+                            }
+                            else
+                            {
+                                Error("Variable expected");
+                                return;
                             }
                         }
                     }
@@ -414,7 +522,8 @@ endOfDefine:
                     else if (line.StartsWith("arraytovars"))    // Convert arrays to variables, an array containing "abc, a" will
                                                                 // make two variables called $a1 and $a2, $a1 contains abc and $a2 contains a
                     {
-                        if (line.Split(" ")[1].StartsWith("$")){
+                        if (line.Split(" ")[1].StartsWith("$"))
+                        {
                             if (isArray(line.Split(" ")[1][1..]))
                             {
                                 int thing = 0;
@@ -438,6 +547,12 @@ endOfDefine:
                     {
                     }
                     else if (line == "stopif")
+                    {
+                    }
+                    else if (line == "stoploop")
+                    {
+                    }
+                    else if (line == "else")
                     {
                     }
                     else if (line.StartsWith("%>"))
