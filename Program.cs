@@ -48,7 +48,31 @@ namespace percentCool
             "    <p>HTTP 404 NOT Found</p>" +
             "  </body>" +
             "</html>";
-
+        public static string safeEscape(string str)
+        {
+            return Regex.Replace(str, @"[\x00'""\b\n\r\t\cZ\\%_]",
+                delegate (Match match)
+                {
+                    string v = match.Value;
+                    switch (v)
+                    {
+                        case "\x00":            // ASCII NUL (0x00) character
+                            return "\\0";
+                        case "\b":              // BACKSPACE character
+                            return "\\b";
+                        case "\n":              // NEWLINE (linefeed) character
+                            return "\\n";
+                        case "\r":              // CARRIAGE RETURN character
+                            return "\\r";
+                        case "\t":              // TAB
+                            return "\\t";
+                        case "\u001A":          // Ctrl-Z
+                            return "\\Z";
+                        default:
+                            return "\\" + v;
+                    }
+                });
+        }
         // Function from my old programming language GOOMBAServer
         public static void InitializeSQL(string host, string db, string user, string pass)
         {
@@ -507,6 +531,18 @@ endOfDefine:
                         else
                         {
                             Error("Use sqlconnect before sqlquery");
+                            return;
+                        }
+                    }
+                    else if (line.StartsWith("escape"))
+                    {
+                        if (line.Split(" ").Length > 1 && line.Split(" ")[1][0] == '$')
+                        {
+                            variables[line.Split(" ")[1][1..]] = safeEscape(variables[line.Split(" ")[1][1..]]);
+                        }
+                        else
+                        {
+                            Error("Variable expected");
                             return;
                         }
                     }
