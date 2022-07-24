@@ -4,6 +4,7 @@ using System.Net;
 using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
+using MySql.Data.MySqlClient;
 
 namespace percentCool
 {
@@ -20,6 +21,12 @@ namespace percentCool
         public static int randMax = 10;
         public static bool doingPercent = false;
         public static string where = "";
+        public static string server;
+        public static string database;
+        public static string uid;
+        public static string password;
+        public static MySqlConnection connection;
+        public static List<string> vs1 = new List<string>();
 
         static int i;       // For line numbers in errors, and arrays.
 
@@ -30,6 +37,19 @@ namespace percentCool
             "    <p>HTTP 404 NOT Found</p>" +
             "  </body>" +
             "</html>";
+
+        // Function from my old programming language GOOMBAServer
+        public static void InitializeSQL(string host, string db, string user, string pass)
+        {
+            server = host;
+            database = db;
+            uid = user;
+            password = pass;
+            string connectionString;
+            connectionString = "SERVER=" + server + ";" + "DATABASE=" +
+            database + ";" + "UID=" + uid + ";" + "PASSWORD=" + password + ";";
+            connection = new MySqlConnection(connectionString);
+        }
         /// <summary>
         /// Check if source is a multiple of multiple
         /// </summary>
@@ -54,6 +74,125 @@ namespace percentCool
                     return reader.ReadToEnd();
                 }
             }
+        }
+        //open connection to database
+        private static bool OpenConnection()
+        {
+            try
+            {
+                connection.Open();
+                return true;
+            }
+            catch (MySqlException ex)
+            {
+                switch (ex.Number)
+                {
+                    case 0:
+                        Console.WriteLine("SQL #0: Cannot connect to server.");
+                        Error("SQL #0: Cannot connect to server.");
+                        break;
+
+                    case 1045:
+                        Console.WriteLine("SQL #1045: Invalid user name and/or password.");
+                        Error("SQL #1045: Incorrect username/password");
+                        break;
+                }
+                Console.WriteLine(ex.Message);
+                Error(ex.Message);
+                return false;
+            }
+        }
+        //Close connection
+        public static bool CloseConnection()
+        {
+            try
+            {
+                connection.Close();
+                return true;
+            }
+            catch
+            {
+                return false;
+            }
+        }
+        //Query
+        public static string[] Query(string cmad, bool useSafeStr)
+        {
+
+            Console.WriteLine("Query Started.");
+            string query = cmad;
+
+            if (query.ToUpper().StartsWith("SELECT"))
+            {
+                //Open connection
+                if (OpenConnection() == true)
+                {
+                    string[] forSelect = query.Split(' ');
+                    Console.WriteLine("Open");
+                    //create mysql command
+                    MySqlCommand cmd = new MySqlCommand();
+                    //Assign the query using CommandText
+                    cmd.CommandText = query;
+                    //Assign the connection using Connection
+                    cmd.Connection = connection;
+
+                    //Execute query
+                    var ret = cmd.ExecuteReader();
+                    string[] vs = { };
+                    var i = -1;
+                    vs1.Clear();
+                    if (forSelect[1] != "*")        // Check if its a wildcard
+                    {
+                        while (ret.Read())
+                        {
+                            i++;
+                            vs1.Add(ret[forSelect[1]].ToString());
+                        }
+                    }
+                    else
+                    {
+                        while (ret.Read())
+                        {
+                            for (var f = 0; f < ret.FieldCount; f++)
+                            {
+                                i++;
+                                vs1.Add(ret[ret.GetName(f)].ToString());
+                            }
+                        }
+                    }
+                    ret.Close();
+                    connection.Close();
+                    return vs;
+                }
+            }
+            else
+            {
+                //Open connection
+                if (OpenConnection() == true)
+                {
+                    Console.WriteLine("Open");
+                    //create mysql command
+                    MySqlCommand cmd = new MySqlCommand();
+                    //Assign the query using CommandText
+                    cmd.CommandText = query;
+                    //Assign the connection using Connection
+                    cmd.Connection = connection;
+
+                    //Execute query
+                    cmd.ExecuteNonQuery();
+                    string[] strtoret = { };
+                    connection.Close();
+                    return strtoret;
+
+                }
+                string[] strtorets = { };
+                return strtorets;
+            }
+            string[] strtoretss = { };
+            return strtoretss;
+
+
+
         }
         /// <summary>
         /// Display error message
@@ -226,6 +365,26 @@ namespace percentCool
                                 skipIfStmt = true;
                             }
                         }
+                    }
+                    else if (line.StartsWith("sqlquery"))
+                    {
+                        if (database != null)
+                        {
+                            Query(line.Substring(9), false);
+                        } else
+                        {
+                            Error("Use sqlconnect before sqlquery");
+                            return;
+                        }
+                    }
+                    else if (line.StartsWith("sqlconnect"))
+                    {
+                        if (line.Split(" ").Length != 5)
+                        {
+                            Error("Expected 4 arguments (sqlconnect)");
+                            return;
+                        }
+                        InitializeSQL(line.Split(" ")[1], line.Split(" ")[2], line.Split(" ")[3], line.Split(" ")[4]);
                     }
                     else if (line.StartsWith("//"))
                     {
