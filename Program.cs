@@ -557,7 +557,10 @@ endOfDefine:
                     {
                         if (line.Split(" ").Length > 3 && line.Split(" ")[1][0] == '$')
                         {
-                            variables[line.Split(" ")[1][1..]] = variables[line.Split(" ")[1][1..]].Replace(line.Split(" ")[2], line.Split(" ")[3]);
+                            if (isVariable(line.Split(" ")[1][1..]))
+                            {
+                                variables[line.Split(" ")[1][1..]] = variables[line.Split(" ")[1][1..]].Replace(line.Split(" ")[2], line.Split(" ")[3]);
+                            }
                         }
                         else
                         {
