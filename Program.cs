@@ -27,7 +27,7 @@ namespace percentCool
         public static Dictionary<string, List<string>> arrays = new();
         public static string version = "1.01";
         public static HttpListener listener;
-        public static string url = "http://localhost:8000/";
+        public static string url = "http://*:8000/";
         public static int pageViews = 0;
         public static int requestCount = 0;
         public static int randMax = 10;
