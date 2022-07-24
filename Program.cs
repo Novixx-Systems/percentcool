@@ -1,4 +1,7 @@
-﻿using System;
+﻿// copyright (c) 2022 Novixx Systems
+
+
+using System;
 using System.Collections.Generic;
 using System.Net;
 using System.Text;
@@ -10,9 +13,10 @@ namespace percentCool
 {
     internal class Program
     {
-        public static Random random = new Random();
+        public static Random random = new();
         public static bool skipIfStmt = false;
-        public static Dictionary<string, string> variables = new Dictionary<string, string>();
+        public static Dictionary<string, string> variables = new();
+        public static Dictionary<string, List<string>> arrays = new();
         public static string version = "1.01";
         public static HttpListener listener;
         public static string url = "http://localhost:8000/";
@@ -26,7 +30,7 @@ namespace percentCool
         public static string uid;
         public static string password;
         public static MySqlConnection connection;
-        public static List<string> vs1 = new List<string>();
+        public static List<string> vs1 = new();
 
         static int i;       // For line numbers in errors, and arrays.
 
@@ -67,13 +71,9 @@ namespace percentCool
             {
                 return null;
             }
-            using (System.IO.Stream body = request.InputStream) // here we have data
-            {
-                using (var reader = new System.IO.StreamReader(body, request.ContentEncoding))
-                {
-                    return reader.ReadToEnd();
-                }
-            }
+            using System.IO.Stream body = request.InputStream; // here we have data
+            using var reader = new System.IO.StreamReader(body, request.ContentEncoding);
+            return reader.ReadToEnd();
         }
         //open connection to database
         private static bool OpenConnection()
@@ -116,7 +116,7 @@ namespace percentCool
             }
         }
         //Query
-        public static string[] Query(string cmad, bool useSafeStr)
+        public static string[] Query(string cmad)
         {
 
             Console.WriteLine("Query Started.");
@@ -130,15 +130,16 @@ namespace percentCool
                     string[] forSelect = query.Split(' ');
                     Console.WriteLine("Open");
                     //create mysql command
-                    MySqlCommand cmd = new MySqlCommand();
-                    //Assign the query using CommandText
-                    cmd.CommandText = query;
-                    //Assign the connection using Connection
-                    cmd.Connection = connection;
+                    MySqlCommand cmd = new()
+                    {
+                        //Assign the query using CommandText
+                        CommandText = query,
+                        //Assign the connection using Connection
+                        Connection = connection
+                    };
 
                     //Execute query
                     var ret = cmd.ExecuteReader();
-                    string[] vs = { };
                     var i = -1;
                     vs1.Clear();
                     if (forSelect[1] != "*")        // Check if its a wildcard
@@ -161,8 +162,14 @@ namespace percentCool
                         }
                     }
                     ret.Close();
+
+                    if (isArray("sqlresult"))
+                    {
+                        arrays.Remove("sqlresult");
+                    }
+                    arrays.Add("sqlresult", vs1);
                     connection.Close();
-                    return vs;
+                    return null;
                 }
             }
             else
@@ -172,24 +179,23 @@ namespace percentCool
                 {
                     Console.WriteLine("Open");
                     //create mysql command
-                    MySqlCommand cmd = new MySqlCommand();
-                    //Assign the query using CommandText
-                    cmd.CommandText = query;
-                    //Assign the connection using Connection
-                    cmd.Connection = connection;
+                    MySqlCommand cmd = new()
+                    {
+                        //Assign the query using CommandText
+                        CommandText = query,
+                        //Assign the connection using Connection
+                        Connection = connection
+                    };
 
                     //Execute query
                     cmd.ExecuteNonQuery();
-                    string[] strtoret = { };
                     connection.Close();
-                    return strtoret;
+                    return null;
 
                 }
-                string[] strtorets = { };
-                return strtorets;
+                return null;
             }
-            string[] strtoretss = { };
-            return strtoretss;
+            return null;
 
 
 
@@ -207,6 +213,14 @@ namespace percentCool
         public static bool isVariable(string name)
         {
             if (variables.ContainsKey(name))
+            {
+                return true;
+            }
+            return false;
+        }
+        public static bool isArray(string name)
+        {
+            if (arrays.ContainsKey(name))
             {
                 return true;
             }
@@ -268,30 +282,28 @@ namespace percentCool
                 {
                     if (line.StartsWith("$="))  // Echo (formatted)
                     {
-                        if (line.Substring(2, 1) == "$" && isVariable(line.Substring(3).Replace(" ", "")))
+                        if (line.Substring(2, 1) == "$" && isVariable(line[3..].Replace(" ", "")))
                         {
                             // Print formatted string
-                            string varcont;
-                            variables.TryGetValue(line.Substring(3).Replace(" ", ""), out varcont);
+                            variables.TryGetValue(line[3..].Replace(" ", ""), out string varcont);
                             FormattedPrint(varcont);
                         }
                         else
                         {
                             // Print formatted string
-                            FormattedPrint(line.Substring(2));
+                            FormattedPrint(line[2..]);
                         }
                     }
                     else if (line.StartsWith("echo "))  // Echo
                     {
-                        if (line.Substring(5, 1) == "$" && isVariable(line.Substring(6).Replace(" ", "")))
+                        if (line.Substring(5, 1) == "$" && isVariable(line[6..].Replace(" ", "")))
                         {
-                            string varcont;
-                            variables.TryGetValue(line.Substring(6).Replace(" ", ""), out varcont);
+                            variables.TryGetValue(line[6..].Replace(" ", ""), out string varcont);
                             FormattedPrint(varcont);
                         }
                         else
                         {
-                            pageData += line.Substring(5);
+                            pageData += line[5..];
                         }
                     }
                     // Set random max
@@ -305,34 +317,48 @@ namespace percentCool
                     // Unlink deletes a file, use with caution!
                     else if (line.StartsWith("unlink "))
                     {
-                        if (line.Substring(7, 1) == "$" && isVariable(line.Substring(8).Replace(" ", "")))
+                        if (line.Substring(7, 1) == "$" && isVariable(line[8..].Replace(" ", "")))
                         {
-                            string varcont = null;
-                            variables.TryGetValue(line.Substring(8).Replace(" ", ""), out varcont);
+                            variables.TryGetValue(line[8..].Replace(" ", ""), out string varcont);
                             System.IO.File.Delete(System.IO.Path.Combine(Environment.CurrentDirectory, varcont));
                         }
                         else
                         {
-                            System.IO.File.Delete(System.IO.Path.Combine(Environment.CurrentDirectory, line.Substring(7)));
+                            System.IO.File.Delete(System.IO.Path.Combine(Environment.CurrentDirectory, line[7..]));
                         }
                     }
-                    else if (line.Substring(0, 1) == "$")
+                    else if (line[..1] == "$")  // Starts with a variable
                     {
                         if (line.Contains("@=="))
                         {
-                            if (isVariable(line.Substring(1).Split("@==")[0].Replace(" ", "")))
+                            if (isArray(line[1..].Split("@==")[0].Replace(" ", "").Replace("|", "")))   // If it's an array
                             {
-                                variables.Remove(line.Substring(1).Split("@==")[0].Replace(" ", ""));
+                                arrays[line[1..].Split("@==")[0].Replace(" ", "").Replace("|", "")].Add(line.Split("@==")[1].TrimStart()); // Insert into array
                             }
-                            variables.Add(line.Substring(1).Split("@==")[0].Replace(" ", ""), Format(line.Split("@==")[1].TrimStart()));
+                            if (isVariable(line[1..].Split("@==")[0].Replace(" ", "")))
+                            {
+                                variables.Remove(line[1..].Split("@==")[0].Replace(" ", ""));
+                            }
+                            variables.Add(line[1..].Split("@==")[0].Replace(" ", ""), Format(line.Split("@==")[1].TrimStart()));
                         }
-                        else if (line.Contains("="))
+                        else if (line.Contains("="))        // Array or variable
                         {
-                            if (isVariable(line.Substring(1).Split("=")[0].Replace(" ", "")))
+                            if (isArray(line[1..].Split("=")[0].Replace(" ", "").Replace("|", "")))
                             {
-                                variables.Remove(line.Substring(1).Split("=")[0].Replace(" ", ""));
+                                arrays.Remove(line[1..].Split("=")[0].Replace(" ", "").Replace("|", ""));
                             }
-                            variables.Add(line.Substring(1).Split("=")[0].Replace(" ", ""), line.Split("=")[1].TrimStart());
+                            if (isVariable(line[1..].Split("=")[0].Replace(" ", "").Replace("{", "")))
+                            {
+                                variables.Remove(line[1..].Split("=")[0].Replace(" ", "").Replace("{", ""));
+                            }
+                            if (line[1..].Split("=")[1].Replace(" ", "").StartsWith("|"))
+                            {
+                                arrays.Add(line[1..].Split("=")[0].Replace(" ", ""), new List<string>(line[1..].Split("|")[1].Split(",")));
+                                goto endOfDefine;
+                            }
+                            variables.Add(line[1..].Split("=")[0].Replace(" ", ""), line.Split("=")[1].TrimStart());
+endOfDefine:
+                            ((Action)(() => { }))();    // Nothing
                         }
                         else
                         {
@@ -345,19 +371,17 @@ namespace percentCool
                     {
                         if (line.Contains("="))
                         {
-                            string toCheck = line.Substring(3).Split("=")[0].TrimEnd();        // Just some stuff that makes
-                                                                                               // it contain the first argument
-                            if (line.Substring(3, 1) == "$" && isVariable(line.Substring(4).Split("=")[0].Trim()))
+                            string toCheck = line[3..].Split("=")[0].TrimEnd();        // Just some stuff that makes
+                                                                                       // it contain the first argument
+                            if (line.Substring(3, 1) == "$" && isVariable(line[4..].Split("=")[0].Trim()))
                             {
-                                string varcont;
-                                variables.TryGetValue(line.Substring(4).Split("=")[0].TrimEnd(), out varcont);
+                                variables.TryGetValue(line[4..].Split("=")[0].TrimEnd(), out string varcont);
                                 toCheck = varcont;
                             }
-                            string secondCheck = line.Substring(3).Split("=")[1].TrimStart();        // The thing to compare to
-                            if (line.Split("=")[1].Trim().Substring(0, 1) == "$" && isVariable(line.Substring(4).Split("=")[1].Trim().Substring(1)))
+                            string secondCheck = line[3..].Split("=")[1].TrimStart();        // The thing to compare to
+                            if (line.Split("=")[1].Trim()[..1] == "$" && isVariable(line[4..].Split("=")[1].Trim()[1..]))
                             {
-                                string varcont;
-                                variables.TryGetValue(line.Substring(4).Split("=")[1].Trim().Substring(1), out varcont);
+                                variables.TryGetValue(line[4..].Split("=")[1].Trim()[1..], out string varcont);
                                 secondCheck = varcont;
                             }
                             if (toCheck != secondCheck)
@@ -370,8 +394,9 @@ namespace percentCool
                     {
                         if (database != null)
                         {
-                            Query(line.Substring(9), false);
-                        } else
+                            Query(line[9..]);
+                        }
+                        else
                         {
                             Error("Use sqlconnect before sqlquery");
                             return;
@@ -385,6 +410,29 @@ namespace percentCool
                             return;
                         }
                         InitializeSQL(line.Split(" ")[1], line.Split(" ")[2], line.Split(" ")[3], line.Split(" ")[4]);
+                    }
+                    else if (line.StartsWith("arraytovars"))    // Convert arrays to variables, an array containing "abc, a" will
+                                                                // make two variables called $a1 and $a2, $a1 contains abc and $a2 contains a
+                    {
+                        if (line.Split(" ")[1].StartsWith("$")){
+                            if (isArray(line.Split(" ")[1][1..]))
+                            {
+                                int thing = 0;
+                                foreach (string value in arrays[line.Split(" ")[1][1..]])
+                                {
+                                    thing++;
+                                    if (isVariable("a" + thing.ToString()))
+                                    {
+                                        variables.Remove("a" + thing.ToString());
+                                    }
+                                    variables.Add("a" + thing.ToString(), value);
+                                }
+                            }
+                            else
+                            {
+                                Error("Cannot find variable " + line.Split(" ")[1][1..] + ", or not an array");
+                            }
+                        }
                     }
                     else if (line.StartsWith("//"))
                     {
@@ -429,13 +477,13 @@ namespace percentCool
                 Console.WriteLine(req.UserAgent);
                 Console.WriteLine();
 
-                if (System.IO.File.Exists(req.Url.AbsolutePath.Substring(1)))
+                if (System.IO.File.Exists(req.Url.AbsolutePath[1..]))
                 {
                     pageData = "";
-                    ParseCOOL(System.IO.File.ReadAllText(req.Url.AbsolutePath.Substring(1)), req);
-                    where = req.Url.AbsolutePath.Substring(1).Split(".")[1];
+                    ParseCOOL(System.IO.File.ReadAllText(req.Url.AbsolutePath[1..]), req);
+                    where = req.Url.AbsolutePath[1..].Split(".")[1];
                 }
-                else if (req.Url.AbsolutePath.Substring(1) == "")
+                else if (req.Url.AbsolutePath[1..] == "")
                 {
                     if (System.IO.File.Exists("index.cool"))
                     {
@@ -452,7 +500,6 @@ namespace percentCool
                 }
 
                 // Write the response info
-                string disableSubmit = !runServer ? "disabled" : "";
                 byte[] data = Encoding.UTF8.GetBytes(pageData);
                 if (where == "html" || where == "cool")
                 {
@@ -484,7 +531,7 @@ namespace percentCool
         }
 
 
-        public static void Main(string[] args)
+        public static void Main()
         {
             // Create a Http server and start listening for incoming connections
             listener = new HttpListener();
