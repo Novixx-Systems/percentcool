@@ -277,6 +277,7 @@ namespace percentCool
         // Parse COOL code
         public static void ParseCOOL(string code, HttpListenerRequest req)
         {
+            doingPercent = false;
             string reqs = GetRequestPostData(req);
             if (reqs != null)                       // Get post request into variable
             {
@@ -684,6 +685,11 @@ endOfDefine:
 
         public static void Main()
         {
+            if (!System.IO.Directory.Exists(System.IO.Path.Combine(Environment.CurrentDirectory, "www")))
+            {
+                System.IO.Directory.CreateDirectory(System.IO.Path.Combine(Environment.CurrentDirectory, "www"));
+            }
+            Environment.CurrentDirectory = System.IO.Path.Combine(Environment.CurrentDirectory, "www");
             // Create a Http server and start listening for incoming connections
             listener = new HttpListener();
             listener.Prefixes.Add(url);
