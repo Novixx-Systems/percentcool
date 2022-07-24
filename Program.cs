@@ -285,12 +285,24 @@ namespace percentCool
         {
             doingPercent = false;
             string reqs = GetRequestPostData(req);
+            foreach (string item in req.QueryString)
+            {
+                if (isVariable("url." + item))
+                {
+                    variables.Remove("url." + item);
+                }
+                variables.Add("url." + item, HttpUtility.UrlDecode(req.QueryString[item]));
+            }
             if (reqs != null)                       // Get post request into variable
             {
                 string[] eq = reqs.Split("&");
                 foreach (string eqStr in eq)
                 {
                     string[] nd = eqStr.Split("=");
+                    if (isVariable(nd[0]))
+                    {
+                        variables.Remove(nd[0]);
+                    }
                     variables.Add(nd[0], HttpUtility.UrlDecode(nd[1]));
                 }
             }
@@ -320,7 +332,7 @@ namespace percentCool
                     {
                         if (line == "stoploop")
                         {
-                            if (loopCount >= arrays[loopThrough[1..]].Count-1)
+                            if (loopCount >= arrays[loopThrough[1..]].Count - 1)
                             {
                                 inLoop = false;
                                 savedLoopInt = 0;
@@ -666,7 +678,7 @@ endOfDefine:
                 }
                 else
                 {
-                    if (System.IO.File.Exists(System.IO.Path.Combine(Environment.CurrentDirectory,req.Url.AbsolutePath[1..],"index.cool")))
+                    if (System.IO.File.Exists(System.IO.Path.Combine(Environment.CurrentDirectory, req.Url.AbsolutePath[1..], "index.cool")))
                     {
                         pageData = "";
                         ParseCOOL(System.IO.File.ReadAllText(System.IO.Path.Combine(Environment.CurrentDirectory, req.Url.AbsolutePath[1..], "index.cool")), req);
