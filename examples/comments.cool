@@ -1,0 +1,30 @@
+<%cool
+sqlconnect host database user password
+if $comment = NULL
+else
+	// Add comment to database
+	escape $comment
+	sqlquery INSERT INTO comments (comment) VALUES ('$comment')
+stopif
+%>
+<form method="post">
+<input type="text" name="comment">
+<input type="submit">
+</form>
+<%cool
+sqlquery SELECT comment FROM comments
+foreach $sqlresult
+
+	// First step: replace xss-able characters with
+	// their entity code.
+
+	replace $i < &lt;
+	replace $i > &gt;
+	replace $i " &quot;
+	
+	// Second step: display output
+
+	echo $i
+	echo <br><br>
+stoploop
+%>
