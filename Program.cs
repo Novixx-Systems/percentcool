@@ -600,7 +600,7 @@ endOfDefine:
                 }
                 else
                 {
-                    if (!firstPercent) pageData += line;
+                    if (!firstPercent) pageData += line + "\n";
                 }
             }
         }
@@ -612,6 +612,7 @@ endOfDefine:
 
             while (runServer)
             {
+                byte[] data = null;
                 variables.Clear();
                 randMax = 0;
                 // Will wait here until we hear from a connection
@@ -631,28 +632,38 @@ endOfDefine:
 
                 if (System.IO.File.Exists(req.Url.AbsolutePath[1..]))
                 {
-                    pageData = "";
-                    ParseCOOL(System.IO.File.ReadAllText(req.Url.AbsolutePath[1..]), req);
                     where = req.Url.AbsolutePath[1..].Split(".")[1];
-                }
-                else if (req.Url.AbsolutePath[1..] == "")
-                {
-                    if (System.IO.File.Exists("index.cool"))
+                    if (where == "html" || where == "cool")
                     {
                         pageData = "";
-                        ParseCOOL(System.IO.File.ReadAllText("index.cool"), req);
+                        ParseCOOL(System.IO.File.ReadAllText(req.Url.AbsolutePath[1..]), req);
+                    }
+                    else
+                    {
+                        data = System.IO.File.ReadAllBytes(req.Url.AbsolutePath[1..]);
+                    }
+                }
+                else
+                {
+                    if (System.IO.File.Exists(System.IO.Path.Combine(Environment.CurrentDirectory,req.Url.AbsolutePath[1..],"index.cool")))
+                    {
+                        pageData = "";
+                        ParseCOOL(System.IO.File.ReadAllText(System.IO.Path.Combine(Environment.CurrentDirectory, req.Url.AbsolutePath[1..], "index.cool")), req);
                         where = "cool";
                     }
-                    else if (System.IO.File.Exists("index.html"))
+                    else if (System.IO.File.Exists(System.IO.Path.Combine(Environment.CurrentDirectory, req.Url.AbsolutePath[1..], "index.html")))
                     {
                         pageData = "";
-                        ParseCOOL(System.IO.File.ReadAllText("index.html"), req);
+                        ParseCOOL(System.IO.File.ReadAllText(System.IO.Path.Combine(Environment.CurrentDirectory, req.Url.AbsolutePath[1..], "index.html")), req);
                         where = "html";
                     }
                 }
 
                 // Write the response info
-                byte[] data = Encoding.UTF8.GetBytes(pageData);
+                if (data == null)
+                {
+                    data = Encoding.UTF8.GetBytes(pageData);
+                }
                 if (where == "html" || where == "cool")
                 {
                     resp.ContentType = "text/html";
