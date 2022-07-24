@@ -9,6 +9,7 @@ using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using MySql.Data.MySqlClient;
 using System.Linq;
+using System.Web;
 
 namespace percentCool
 {
@@ -48,6 +49,11 @@ namespace percentCool
             "    <p>HTTP 404 NOT Found</p>" +
             "  </body>" +
             "</html>";
+        /// <summary>
+        /// Makes a secure string for MySQL
+        /// </summary>
+        /// <param name="str">The string to make secure</param>
+        /// <returns></returns>
         public static string safeEscape(string str)
         {
             return Regex.Replace(str, @"[\x00'""\b\n\r\t\cZ\\%_]",
@@ -285,7 +291,7 @@ namespace percentCool
                 foreach (string eqStr in eq)
                 {
                     string[] nd = eqStr.Split("=");
-                    variables.Add(nd[0], nd[1].Replace("+", " "));
+                    variables.Add(nd[0], HttpUtility.UrlDecode(nd[1]));
                 }
             }
             bool firstPercent;
@@ -540,6 +546,18 @@ endOfDefine:
                         if (line.Split(" ").Length > 1 && line.Split(" ")[1][0] == '$')
                         {
                             variables[line.Split(" ")[1][1..]] = safeEscape(variables[line.Split(" ")[1][1..]]);
+                        }
+                        else
+                        {
+                            Error("Variable expected");
+                            return;
+                        }
+                    }
+                    else if (line.StartsWith("replace"))
+                    {
+                        if (line.Split(" ").Length > 3 && line.Split(" ")[1][0] == '$')
+                        {
+                            variables[line.Split(" ")[1][1..]] = variables[line.Split(" ")[1][1..]].Replace(line.Split(" ")[2], line.Split(" ")[3]);
                         }
                         else
                         {
