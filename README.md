@@ -12,3 +12,11 @@ This is a tutorial on how to program in percentCool, this tutorial is a work-in-
     echo Hello World
     %>
 ```
+
+you can ofcourse also use HTML. but when in "cool" mode you cannot use HTML.
+
+To use HTML, exit "cool" mode first, to do that, type
+```
+    %>
+```
+and type your HTML on the lines below.
