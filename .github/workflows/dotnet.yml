@@ -1,5 +1,4 @@
-name: .NET
-
+name: Build
 on:
   push:
     branches: [ "main" ]
