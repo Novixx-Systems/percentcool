@@ -247,7 +247,9 @@ namespace percentCool
         /// <param name="errorReason">The error message</param>
         public static void Error(string errorReason)    // Error
         {
-            pageData = "percentCool error: " + errorReason + " at line " + (i + 1).ToString();
+            string errorContent = "percentCool error: " + errorReason + " at line " + (i + 1).ToString();
+            pageData = errorContent;
+            System.IO.File.AppendAllText("error_log", errorContent + "\n");
         }
 
         // Check if a string is a variable name
@@ -281,31 +283,37 @@ namespace percentCool
             pageData += Format(toPrint);
         }
         // Parse COOL code
-        public static void ParseCOOL(string code, HttpListenerRequest req)
+        public static void ParseCOOL(string code, HttpListenerRequest req, bool included)
         {
-            variables.Add("_TIME", DateTime.UtcNow.ToString("hh:mm:ss"));
-            variables.Add("_DATE", DateTime.UtcNow.ToString("yyyy-MM-dd"));
-            doingPercent = false;
-            string reqs = GetRequestPostData(req);
-            foreach (string item in req.QueryString)
+            if (!included)
             {
-                if (isVariable("url." + item))
-                {
-                    variables.Remove("url." + item);
-                }
-                variables.Add("url." + item, HttpUtility.UrlDecode(req.QueryString[item]));
+                variables.Add("_TIME", DateTime.UtcNow.ToString("hh:mm:ss"));
+                variables.Add("_DATE", DateTime.UtcNow.ToString("yyyy-MM-dd"));
             }
-            if (reqs != null)                       // Get post request into variable
+            doingPercent = false;
+            if (!included)
             {
-                string[] eq = reqs.Split("&");
-                foreach (string eqStr in eq)
+                string reqs = GetRequestPostData(req);
+                foreach (string item in req.QueryString)
                 {
-                    string[] nd = eqStr.Split("=");
-                    if (isVariable(nd[0]))
+                    if (isVariable("url." + item))
                     {
-                        variables.Remove(nd[0]);
+                        variables.Remove("url." + item);
                     }
-                    variables.Add(nd[0], HttpUtility.UrlDecode(nd[1]));
+                    variables.Add("url." + item, HttpUtility.UrlDecode(req.QueryString[item]));
+                }
+                if (reqs != null)                       // Get post request into variable
+                {
+                    string[] eq = reqs.Split("&");
+                    foreach (string eqStr in eq)
+                    {
+                        string[] nd = eqStr.Split("=");
+                        if (isVariable(nd[0]))
+                        {
+                            variables.Remove(nd[0]);
+                        }
+                        variables.Add(nd[0], HttpUtility.UrlDecode(nd[1]));
+                    }
                 }
             }
             bool firstPercent;
@@ -415,6 +423,18 @@ namespace percentCool
                             pageData += line[5..];
                         }
                     }
+                    // Include
+                    else if (line.StartsWith("include "))  // Echo
+                    {
+                        if (System.IO.File.Exists(line[8..]))
+                        {
+                            ParseCOOL(System.IO.File.ReadAllText(line[8..]), req, true);
+                        }
+                        else
+                        {
+                            Error("Cannot open " + line[8..]);
+                        }
+                    }
                     // Set random max
                     else if (line.StartsWith("rndmax "))  // Rndmax
                     {
@@ -476,7 +496,7 @@ endOfDefine:
                         }
                     }
                     // Here comes the if statement...
-                    else if (line.StartsWith("if"))
+                    else if (line.StartsWith("if "))
                     {
                         if (line.Contains("="))
                         {
@@ -508,7 +528,7 @@ endOfDefine:
                             }
                         }
                     }
-                    else if (line.StartsWith("getdate"))
+                    else if (line.StartsWith("getdate "))
                     {
                         if (line.Split(" ").Length > 1)
                         {
@@ -519,7 +539,7 @@ endOfDefine:
                             variables.Add(line.Split(" ")[1], DateTime.UtcNow.ToString("yyyy-MM-dd"));
                         }
                     }
-                    else if (line.StartsWith("foreach"))
+                    else if (line.StartsWith("foreach "))
                     {
                         if (line.Split(" ").Length > 1)
                         {
@@ -554,7 +574,7 @@ endOfDefine:
                             }
                         }
                     }
-                    else if (line.StartsWith("sqlquery"))
+                    else if (line.StartsWith("sqlquery "))
                     {
                         if (database != null)
                         {
@@ -566,7 +586,7 @@ endOfDefine:
                             return;
                         }
                     }
-                    else if (line.StartsWith("escape"))
+                    else if (line.StartsWith("escape "))
                     {
                         if (line.Split(" ").Length > 1 && line.Split(" ")[1][0] == '$')
                         {
@@ -578,7 +598,7 @@ endOfDefine:
                             return;
                         }
                     }
-                    else if (line.StartsWith("replace"))
+                    else if (line.StartsWith("replace "))
                     {
                         if (line.Split(" ").Length > 3 && line.Split(" ")[1][0] == '$')
                         {
@@ -593,7 +613,7 @@ endOfDefine:
                             return;
                         }
                     }
-                    else if (line.StartsWith("sqlconnect"))
+                    else if (line.StartsWith("sqlconnect "))
                     {
                         if (line.Split(" ").Length != 5)
                         {
@@ -602,7 +622,7 @@ endOfDefine:
                         }
                         InitializeSQL(line.Split(" ")[1], line.Split(" ")[2], line.Split(" ")[3], line.Split(" ")[4]);
                     }
-                    else if (line.StartsWith("arraytovars"))    // Convert arrays to variables, an array containing "abc, a" will
+                    else if (line.StartsWith("arraytovars "))    // Convert arrays to variables, an array containing "abc, a" will
                                                                 // make two variables called $a1 and $a2, $a1 contains abc and $a2 contains a
                     {
                         if (line.Split(" ")[1].StartsWith("$"))
@@ -682,7 +702,7 @@ endOfDefine:
                     if (where == "html" || where == "cool")
                     {
                         pageData = "";
-                        ParseCOOL(System.IO.File.ReadAllText(req.Url.AbsolutePath[1..]), req);
+                        ParseCOOL(System.IO.File.ReadAllText(req.Url.AbsolutePath[1..]), req, false);
                     }
                     else
                     {
@@ -694,13 +714,13 @@ endOfDefine:
                     if (System.IO.File.Exists(System.IO.Path.Combine(Environment.CurrentDirectory, req.Url.AbsolutePath[1..], "index.cool")))
                     {
                         pageData = "";
-                        ParseCOOL(System.IO.File.ReadAllText(System.IO.Path.Combine(Environment.CurrentDirectory, req.Url.AbsolutePath[1..], "index.cool")), req);
+                        ParseCOOL(System.IO.File.ReadAllText(System.IO.Path.Combine(Environment.CurrentDirectory, req.Url.AbsolutePath[1..], "index.cool")), req, false);
                         where = "cool";
                     }
                     else if (System.IO.File.Exists(System.IO.Path.Combine(Environment.CurrentDirectory, req.Url.AbsolutePath[1..], "index.html")))
                     {
                         pageData = "";
-                        ParseCOOL(System.IO.File.ReadAllText(System.IO.Path.Combine(Environment.CurrentDirectory, req.Url.AbsolutePath[1..], "index.html")), req);
+                        ParseCOOL(System.IO.File.ReadAllText(System.IO.Path.Combine(Environment.CurrentDirectory, req.Url.AbsolutePath[1..], "index.html")), req, false);
                         where = "html";
                     }
                 }
