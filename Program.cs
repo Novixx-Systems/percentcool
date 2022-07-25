@@ -283,6 +283,8 @@ namespace percentCool
         // Parse COOL code
         public static void ParseCOOL(string code, HttpListenerRequest req)
         {
+            variables.Add("_TIME", DateTime.UtcNow.ToString("hh:mm:ss"));
+            variables.Add("_DATE", DateTime.UtcNow.ToString("yyyy-MM-dd"));
             doingPercent = false;
             string reqs = GetRequestPostData(req);
             foreach (string item in req.QueryString)
@@ -504,6 +506,17 @@ endOfDefine:
                             {
                                 skipElseStmt = true;
                             }
+                        }
+                    }
+                    else if (line.StartsWith("getdate"))
+                    {
+                        if (line.Split(" ").Length > 1)
+                        {
+                            if (isVariable(line.Split(" ")[1]))
+                            {
+                                variables.Remove(line.Split(" ")[1]);
+                            }
+                            variables.Add(line.Split(" ")[1], DateTime.UtcNow.ToString("yyyy-MM-dd"));
                         }
                     }
                     else if (line.StartsWith("foreach"))
