@@ -1,3 +1,7 @@
+[![Build](https://github.com/Novixx-Systems/percentcool/actions/workflows/dotnet.yml/badge.svg?branch=main)](https://github.com/Novixx-Systems/percentcool/actions/workflows/dotnet.yml)
+
+
+
 # percentcool
 percentCool is a programming language for creating websites.
 
