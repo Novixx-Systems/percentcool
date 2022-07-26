@@ -472,14 +472,21 @@ namespace percentCool
                             randMax = int.Parse(line.Split(" ")[1]);
                         }
                     }
-                    else if (line.StartsWith("sessionset "))
+                    else if (line.StartsWith("sessionset "))    // arg1 = variable name, arg2 = variable value
                     {
                         if (line.Split(" ").Length > 2)
                         {
                             try
                             {
                                 List<string> sessionvalues = System.IO.File.ReadLines(System.IO.Path.Combine(sessionpath, ctx.Response.Cookies["session"].Value)).Where(l => l.StartsWith(line.Split(" ")[1])).ToList();
-                                sessionvalues.Add(line.Split(" ")[1] + ":" + line[(11 + line.Split(" ")[1].Length)..]);
+                                if (line[(12 + line.Split(" ")[1].Length)..].StartsWith("$") && isVariable(line[(13 + line.Split(" ")[1].Length)..]))
+                                {
+                                    sessionvalues.Add(line.Split(" ")[1] + ":" + variables[line[(13 + line.Split(" ")[1].Length)..]]);
+                                }
+                                else
+                                {
+                                    sessionvalues.Add(line.Split(" ")[1] + ":" + line[(12 + line.Split(" ")[1].Length)..]);
+                                }
                                 System.IO.File.WriteAllLines(System.IO.Path.Combine(sessionpath, ctx.Response.Cookies["session"].Value), sessionvalues);
                             }
                             catch
