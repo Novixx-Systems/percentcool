@@ -506,44 +506,48 @@ namespace percentCool
                                 {
                                     variables.Remove("_SESSIONGET");
                                 }
-                                variables.Add("_SESSIONGET", sessionvalues.Where(r => sessionvalues.Any(f => r.StartsWith(f))).ToArray()[0][(sessionvalues.Where(r => sessionvalues.Any(f => r.StartsWith(f))).ToArray()[0].Length + 1)..]);
+                                List<string> resultList = sessionvalues.Where(r => r.StartsWith(line.Split(" ")[1])).ToList();
+                                variables.Add("_SESSIONGET", resultList[0][(resultList[0].Split(":")[0].Length + 1)..]);
                             }
                             catch
                             {
-                                Error("Session not set. Use newsession to create a session");
+                                variables.Add("_SESSIONGET", "");
                             }
                         }
                     }
                     else if (line == "newsession")
                     {
-                        try
+                        if (!cookies.ContainsKey(ctx.Request.RemoteEndPoint.ToString()))
                         {
-                            System.IO.File.Delete(System.IO.Path.Combine(sessionpath, ctx.Response.Cookies["session"].Value));      // Try to delete old session
-                        }
-                        catch 
-                        {
-                        }
-                        string session = NewString(32);
-                        while (System.IO.File.Exists(System.IO.Path.Combine(sessionpath, session)))
-                        {
-                            session = NewString(32);
-                        }
-                        ctx.Response.Cookies.Clear();
-                        Cookie cookie = new Cookie("session", session)
-                        {
-                            Expires = DateTime.Now.AddDays(2)
-                        };
-                        ctx.Response.Cookies.Add(cookie);
-                        if (cookies.ContainsKey(ctx.Request.RemoteEndPoint.ToString()))
-                        {
+                            try
+                            {
+                                System.IO.File.Delete(System.IO.Path.Combine(sessionpath, ctx.Response.Cookies["session"].Value));      // Try to delete old session
+                            }
+                            catch
+                            {
+                            }
+                            string session = NewString(32);
+                            while (System.IO.File.Exists(System.IO.Path.Combine(sessionpath, session)))
+                            {
+                                session = NewString(32);
+                            }
+                            ctx.Response.Cookies.Clear();
+                            Cookie cookie = new Cookie("session", session)
+                            {
+                                Expires = DateTime.Now.AddDays(2)
+                            };
+                            ctx.Response.Cookies.Add(cookie);
                             cookies.Remove(ctx.Request.RemoteEndPoint.ToString());
+
+                            cookies.Add(ctx.Request.RemoteEndPoint.ToString(), cookie);
+                            System.IO.File.Create(System.IO.Path.Combine(sessionpath, ctx.Response.Cookies["session"].Value)).Close();
                         }
-                        cookies.Add(ctx.Request.RemoteEndPoint.ToString(), cookie);
-                        System.IO.File.Create(System.IO.Path.Combine(sessionpath, ctx.Response.Cookies["session"].Value)).Close();
+
                         if (!isVariable("_ISSESSION"))
                         {
                             variables.Add("_ISSESSION", "yes");
                         }
+
                     }
                     // Unlink deletes a file, use with caution!
                     else if (line.StartsWith("unlink "))
