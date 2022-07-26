@@ -19,6 +19,7 @@ namespace percentCool
         public static bool skipIfStmtElse = false;
         public static bool skipElseStmt = false;
         public static bool skipElseStmtB = false;
+        public static string sessionpath;
         public static bool inLoop = false;
         public static string loopThrough;
         public static int loopCount = 0;
@@ -39,6 +40,7 @@ namespace percentCool
         public static string password;
         public static MySqlConnection connection;
         public static List<string> vs1 = new();
+        public static Dictionary<string, Cookie> cookies = new();
 
         static int i;       // For line numbers in errors, and arrays.
 
@@ -49,6 +51,17 @@ namespace percentCool
             "    <p>HTTP 404 NOT Found</p>" +
             "  </body>" +
             "</html>";
+        /// <summary>
+        /// Generate a random string
+        /// </summary>
+        /// <param name="length">The length of the new string</param>
+        /// <returns></returns>
+        public static string NewString(int length)
+        {
+            const string chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklm";
+            return new string(Enumerable.Repeat(chars, length)
+                .Select(s => s[random.Next(s.Length)]).ToArray());
+        }
         /// <summary>
         /// Makes a secure string for MySQL
         /// </summary>
@@ -283,10 +296,28 @@ namespace percentCool
             pageData += Format(toPrint);
         }
         // Parse COOL code
-        public static void ParseCOOL(string code, HttpListenerRequest req, bool included)
+        public static void ParseCOOL(string code, HttpListenerRequest req, HttpListenerContext ctx, bool included)
         {
             if (!included)
             {
+                foreach (Cookie cookie in cookies.Values)
+                {
+                    if (cookie.Expires <= DateTime.Now)
+                    {
+                        foreach (var item in cookies.Where(kvp => kvp.Value == cookie).ToList())
+                        {
+                            cookies.Remove(item.Key);
+                            continue;
+                        }
+                    }
+                    foreach (var item in cookies.Where(kvp => kvp.Value == cookie).ToList())
+                    {
+                        if (ctx.Request.RemoteEndPoint.ToString() == item.Key)
+                        {
+                            ctx.Response.Cookies.Add(cookie);
+                        }
+                    }
+                }
                 variables.Add("_TIME", DateTime.UtcNow.ToString("hh:mm:ss"));
                 variables.Add("_DATE", DateTime.UtcNow.ToString("yyyy-MM-dd"));
                 doingPercent = false;
@@ -426,7 +457,7 @@ namespace percentCool
                     {
                         if (System.IO.File.Exists(line[8..]))
                         {
-                            ParseCOOL(System.IO.File.ReadAllText(line[8..]), req, true);
+                            ParseCOOL(System.IO.File.ReadAllText(line[8..]), req, ctx, true);
                         }
                         else
                         {
@@ -436,9 +467,75 @@ namespace percentCool
                     // Set random max
                     else if (line.StartsWith("rndmax "))  // Rndmax
                     {
-                        if (line.Split(" ").Length > 0)
+                        if (line.Split(" ").Length > 1)
                         {
                             randMax = int.Parse(line.Split(" ")[1]);
+                        }
+                    }
+                    else if (line.StartsWith("sessionset "))
+                    {
+                        if (line.Split(" ").Length > 2)
+                        {
+                            try
+                            {
+                                List<string> sessionvalues = System.IO.File.ReadLines(System.IO.Path.Combine(sessionpath, ctx.Response.Cookies["session"].Value)).Where(l => l.StartsWith(line.Split(" ")[1])).ToList();
+                                sessionvalues.Add(line.Split(" ")[1] + ":" + line[(11 + line.Split(" ")[1].Length)..]);
+                                System.IO.File.WriteAllLines(System.IO.Path.Combine(sessionpath, ctx.Response.Cookies["session"].Value), sessionvalues);
+                            }
+                            catch
+                            {
+                                Error("Session not set. Use newsession to create a session");
+                            }
+                        }
+                    }
+                    else if (line.StartsWith("sessionget "))        // Get session
+                    {
+                        if (line.Split(" ").Length > 1)
+                        {
+                            try
+                            {
+                                List<string> sessionvalues = System.IO.File.ReadLines(System.IO.Path.Combine(sessionpath, ctx.Response.Cookies["session"].Value)).ToList();
+                                if (isVariable("_SESSIONGET"))
+                                {
+                                    variables.Remove("_SESSIONGET");
+                                }
+                                variables.Add("_SESSIONGET", sessionvalues.Where(r => sessionvalues.Any(f => r.StartsWith(f))).ToArray()[0][(sessionvalues.Where(r => sessionvalues.Any(f => r.StartsWith(f))).ToArray()[0].Length + 1)..]);
+                            }
+                            catch
+                            {
+                                Error("Session not set. Use newsession to create a session");
+                            }
+                        }
+                    }
+                    else if (line == "newsession")
+                    {
+                        try
+                        {
+                            System.IO.File.Delete(System.IO.Path.Combine(sessionpath, ctx.Response.Cookies["session"].Value));      // Try to delete old session
+                        }
+                        catch 
+                        {
+                        }
+                        string session = NewString(32);
+                        while (System.IO.File.Exists(System.IO.Path.Combine(sessionpath, session)))
+                        {
+                            session = NewString(32);
+                        }
+                        ctx.Response.Cookies.Clear();
+                        Cookie cookie = new Cookie("session", session)
+                        {
+                            Expires = DateTime.Now.AddDays(2)
+                        };
+                        ctx.Response.Cookies.Add(cookie);
+                        if (cookies.ContainsKey(ctx.Request.RemoteEndPoint.ToString()))
+                        {
+                            cookies.Remove(ctx.Request.RemoteEndPoint.ToString());
+                        }
+                        cookies.Add(ctx.Request.RemoteEndPoint.ToString(), cookie);
+                        System.IO.File.Create(System.IO.Path.Combine(sessionpath, ctx.Response.Cookies["session"].Value)).Close();
+                        if (!isVariable("_ISSESSION"))
+                        {
+                            variables.Add("_ISSESSION", "yes");
                         }
                     }
                     // Unlink deletes a file, use with caution!
@@ -720,7 +817,7 @@ endOfDefine:
                     if (where == "html" || where == "cool")
                     {
                         pageData = "";
-                        ParseCOOL(System.IO.File.ReadAllText(req.Url.AbsolutePath[1..]), req, false);
+                        ParseCOOL(System.IO.File.ReadAllText(req.Url.AbsolutePath[1..]), req, ctx, false);
                     }
                     else
                     {
@@ -732,13 +829,13 @@ endOfDefine:
                     if (System.IO.File.Exists(System.IO.Path.Combine(Environment.CurrentDirectory, req.Url.AbsolutePath[1..], "index.cool")))
                     {
                         pageData = "";
-                        ParseCOOL(System.IO.File.ReadAllText(System.IO.Path.Combine(Environment.CurrentDirectory, req.Url.AbsolutePath[1..], "index.cool")), req, false);
+                        ParseCOOL(System.IO.File.ReadAllText(System.IO.Path.Combine(Environment.CurrentDirectory, req.Url.AbsolutePath[1..], "index.cool")), req, ctx, false);
                         where = "cool";
                     }
                     else if (System.IO.File.Exists(System.IO.Path.Combine(Environment.CurrentDirectory, req.Url.AbsolutePath[1..], "index.html")))
                     {
                         pageData = "";
-                        ParseCOOL(System.IO.File.ReadAllText(System.IO.Path.Combine(Environment.CurrentDirectory, req.Url.AbsolutePath[1..], "index.html")), req, false);
+                        ParseCOOL(System.IO.File.ReadAllText(System.IO.Path.Combine(Environment.CurrentDirectory, req.Url.AbsolutePath[1..], "index.html")), req, ctx, false);
                         where = "html";
                     }
                 }
@@ -784,6 +881,11 @@ endOfDefine:
             {
                 System.IO.Directory.CreateDirectory(System.IO.Path.Combine(Environment.CurrentDirectory, "www"));
             }
+            if (!System.IO.Directory.Exists(System.IO.Path.Combine(Environment.CurrentDirectory, "sessions")))
+            {
+                System.IO.Directory.CreateDirectory(System.IO.Path.Combine(Environment.CurrentDirectory, "sessions"));
+            }
+            sessionpath = System.IO.Path.Combine(Environment.CurrentDirectory, "sessions");
             Environment.CurrentDirectory = System.IO.Path.Combine(Environment.CurrentDirectory, "www");
             // Create a Http server and start listening for incoming connections
             listener = new HttpListener();
