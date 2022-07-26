@@ -511,6 +511,10 @@ endOfDefine:
                                 toCheck = null;
                                 secondCheck = null;
                             }
+                            if (line.Split("=")[1].Trim() == "NOTHING")
+                            {
+                                secondCheck = "";
+                            }
                             if (line.Split("=")[1].Trim()[..1] == "$" && isVariable(line[4..].Split("=")[1].Trim()[1..]))
                             {
                                 variables.TryGetValue(line[4..].Split("=")[1].Trim()[1..], out string varcont);
