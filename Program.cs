@@ -623,7 +623,7 @@ endOfDefine:
                         InitializeSQL(line.Split(" ")[1], line.Split(" ")[2], line.Split(" ")[3], line.Split(" ")[4]);
                     }
                     else if (line.StartsWith("arraytovars "))    // Convert arrays to variables, an array containing "abc, a" will
-                                                                // make two variables called $a1 and $a2, $a1 contains abc and $a2 contains a
+                                                                 // make two variables called $a1 and $a2, $a1 contains abc and $a2 contains a
                     {
                         if (line.Split(" ")[1].StartsWith("$"))
                         {
@@ -695,7 +695,13 @@ endOfDefine:
                 Console.WriteLine(req.UserHostName);
                 Console.WriteLine(req.UserAgent);
                 Console.WriteLine();
-
+                pageData =
+            "<!DOCTYPE>" +
+            "<html>" +
+            "  <body>" +
+            "    <p>HTTP 404 NOT Found</p>" +
+            "  </body>" +
+            "</html>";
                 if (System.IO.File.Exists(req.Url.AbsolutePath[1..]))
                 {
                     where = req.Url.AbsolutePath[1..].Split(".")[1];
