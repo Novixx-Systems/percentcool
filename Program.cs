@@ -467,8 +467,9 @@ namespace percentCool
                                 variables.Remove(line[1..].Split("@==")[0].Replace(" ", ""));
                             }
                             variables.Add(line[1..].Split("@==")[0].Replace(" ", ""), Format(line.Split("@==")[1].TrimStart()));
+                            goto endOfDefine;
                         }
-                        else if (line.Contains("="))        // Array or variable
+                        if (line.Contains("="))        // Array or variable
                         {
                             if (isArray(line[1..].Split("=")[0].Replace(" ", "").Replace("|", "")))
                             {
@@ -483,15 +484,23 @@ namespace percentCool
                                 arrays.Add(line[1..].Split("=")[0].Replace(" ", ""), new List<string>(line[1..].Split("|")[1].Split(",")));
                                 goto endOfDefine;
                             }
+                            if (line[1..].Split("=")[1].Replace(" ", "").StartsWith("$"))           // Variable -> Variable
+                            {
+                                if (isVariable(line[1..].Replace(" ", "").Split("=")[1][1..]))
+                                {
+                                    variables.Add(line[1..].Split("=")[0].Replace(" ", ""), variables[line[1..].Replace(" ", "").Split("=")[1][1..]]);
+                                    goto endOfDefine;
+                                }
+                            }
                             variables.Add(line[1..].Split("=")[0].Replace(" ", ""), line.Split("=")[1].TrimStart());
-endOfDefine:
-                            ((Action)(() => { }))();    // Nothing
                         }
                         else
                         {
                             Error("Invalid argument for variable");
                             return;
                         }
+endOfDefine:
+                        ((Action)(() => { }))();    // Nothing
                     }
                     // Here comes the if statement...
                     else if (line.StartsWith("if "))
