@@ -289,10 +289,7 @@ namespace percentCool
             {
                 variables.Add("_TIME", DateTime.UtcNow.ToString("hh:mm:ss"));
                 variables.Add("_DATE", DateTime.UtcNow.ToString("yyyy-MM-dd"));
-            }
-            doingPercent = false;
-            if (!included)
-            {
+                doingPercent = false;
                 string reqs = GetRequestPostData(req);
                 foreach (string item in req.QueryString)
                 {
@@ -317,9 +314,10 @@ namespace percentCool
                 }
             }
             bool firstPercent;
-            for (i = 0; i < code.Split(new char[] { '\n' }).Length; i++)
+            for (var j = 0; j < code.Split(new char[] { '\n' }).Length; j++)
             {
-                string line = code.Split(new char[] { '\n' })[i].Replace("\r", "").Replace("\t", " ").Trim();
+                i++;
+                string line = code.Split(new char[] { '\n' })[j].Replace("\r", "").Replace("\t", " ").Trim();
                 line = Regex.Replace(line, @"\s+", " ");
                 if (skipIfStmtElse)
                 {
@@ -350,8 +348,8 @@ namespace percentCool
                             else
                             {
                                 loopCount++;
-                                i -= savedLoopInt;
-                                i--;
+                                j -= savedLoopInt;
+                                j--;
                                 savedLoopInt = 0;
                                 if (isVariable("i"))
                                 {
@@ -424,7 +422,7 @@ namespace percentCool
                         }
                     }
                     // Include
-                    else if (line.StartsWith("include "))  // Echo
+                    else if (line.StartsWith("include "))  // Include
                     {
                         if (System.IO.File.Exists(line[8..]))
                         {
@@ -678,6 +676,7 @@ endOfDefine:
 
             while (runServer)
             {
+                i = 0;
                 byte[] data = null;
                 variables.Clear();
                 randMax = 0;
