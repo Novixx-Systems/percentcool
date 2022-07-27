@@ -10,6 +10,7 @@ using System.Threading.Tasks;
 using MySql.Data.MySqlClient;
 using System.Linq;
 using System.Web;
+using percentCool.Utilities;
 
 namespace percentCool
 {
@@ -26,7 +27,7 @@ namespace percentCool
         public static int savedLoopInt = 0;
         public static Dictionary<string, string> variables = new();
         public static Dictionary<string, List<string>> arrays = new();
-        public static string version = "1.01";
+        public static string version = "1.1";
         public static HttpListener listener;
         public static string url = "http://*:8000/";
         public static int pageViews = 0;
@@ -294,7 +295,42 @@ namespace percentCool
         /// <returns></returns>
         public static string Format(string toFormat)
         {
-            return toFormat.Replace("$", pageData).Replace("%%", "&#x25;").Replace("%", version).Replace("\\rnd", random.Next(0, randMax).ToString());
+            bool isEscaper = false; // Bool for checking if the escape character appeared
+            StringBuilder Output = new StringBuilder(new string(' ', 32768));
+            int q = 0;
+            foreach(char c in toFormat)
+            {
+                if (isEscaper)
+                {
+                    isEscaper = false;
+                    Output[q] = c;
+                }
+                else
+                {
+                    if (c == '$')
+                    {
+                        Output = Output.Insert(q, pageData);
+                    }
+                    else if (c == '%')
+                    {
+                        Output = Output.Insert(q, version);
+                    }
+                    else if (c == '~')
+                    {
+                        Output = Output.Insert(q, random.Next(0, randMax).ToString());
+                    }
+                    else if (c != '\\')
+                    {
+                        Output[q] = c;
+                    }
+                }
+                if (c == Special.specialChars[(int)Special.SpecialCharacters.escape].ToCharArray()[0])
+                {
+                    isEscaper = true;
+                }
+                q++;
+            }
+            return Output.ToString().Trim();
         }
         // Parse COOL code
         public static void ParseCOOL(string code, HttpListenerRequest req, HttpListenerContext ctx, bool included)
@@ -426,7 +462,7 @@ namespace percentCool
                     firstPercent = true;
                 }
                 if (doingPercent && !firstPercent)              // If we are in percent mode...
-                { 
+                {
                     if (line.StartsWith("//"))
                     {
                     }
@@ -455,7 +491,7 @@ namespace percentCool
                     {
                         doingPercent = false;
                     }
-                    else 
+                    else
                     {
                         int t = Parser.Parse(line, ctx);
                         if (t == 2)
@@ -554,6 +590,10 @@ namespace percentCool
                 {
                     resp.ContentType = "audio/mpeg";
                 }
+                else if (where == "exe" || where == "zip" || where == "7z" || where == "rar" || where == "apk" || where == "dll")
+                {
+                    resp.ContentType = "application/octet-stream";
+                }
                 else
                 {
                     resp.ContentType = "text/plain";
@@ -570,6 +610,7 @@ namespace percentCool
 
         public static void Main()
         {
+            Console.WriteLine("percentCool version " + version);
             if (!System.IO.Directory.Exists(System.IO.Path.Combine(Environment.CurrentDirectory, "www")))
             {
                 System.IO.Directory.CreateDirectory(System.IO.Path.Combine(Environment.CurrentDirectory, "www"));

@@ -2,7 +2,7 @@
 using System.Text;
 using System.Text.RegularExpressions;
 
-namespace percentCool
+namespace percentCool.Utilities
 {
     internal static class Utils
     {
@@ -37,7 +37,7 @@ namespace percentCool
             string returnValue;
             try
             {
-                returnValue = Parser.line[(currentChar)..];
+                returnValue = Parser.line[currentChar..];
             }
             catch
             {
@@ -45,7 +45,7 @@ namespace percentCool
             }
             foreach (string var in Program.variables.Keys)
             {
-                returnValue = ReplaceWord(returnValue, "$" + var, Program.variables[var]);
+                returnValue = returnValue.ReplaceWord("$" + var, Program.variables[var]);
             }
             return returnValue;
         }

@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Net;
 
-namespace percentCool
+namespace percentCool.Utilities
 {
     internal class Parser
     {
@@ -76,9 +76,9 @@ namespace percentCool
         {
             if (line.Contains("@=="))
             {
-                if (Program.isArray(line[1..].Split("@==")[0].Replace(" ", "").Replace("|", "")))   // If it's an array
+                if (Program.isArray(line[1..].Split("@==")[0].Replace(" ", "").Replace(Special.specialChars[(int)Special.SpecialCharacters.array], "")))   // If it's an array
                 {
-                    Program.arrays[line[1..].Split("@==")[0].Replace(" ", "").Replace("|", "")].Add(line.Split("@==")[1].TrimStart()); // Insert into array
+                    Program.arrays[line[1..].Split("@==")[0].Replace(" ", "").Replace(Special.specialChars[(int)Special.SpecialCharacters.array], "")].Add(line.Split("@==")[1].TrimStart()); // Insert into array
                 }
                 if (Program.isVariable(line[1..].Split("@==")[0].Replace(" ", "")))
                 {
@@ -89,17 +89,17 @@ namespace percentCool
             }
             if (line.Contains("="))        // Array or variable
             {
-                if (Program.isArray(line[1..].Split("=")[0].Replace(" ", "").Replace("|", "")))
+                if (Program.isArray(line[1..].Split("=")[0].Replace(" ", "").Replace(Special.specialChars[(int)Special.SpecialCharacters.array], "")))
                 {
-                    Program.arrays.Remove(line[1..].Split("=")[0].Replace(" ", "").Replace("|", ""));
+                    Program.arrays.Remove(line[1..].Split("=")[0].Replace(" ", "").Replace(Special.specialChars[(int)Special.SpecialCharacters.array], ""));
                 }
                 if (Program.isVariable(line[1..].Split("=")[0].Replace(" ", "").Replace("{", "")))
                 {
                     Program.variables.Remove(line[1..].Split("=")[0].Replace(" ", "").Replace("{", ""));
                 }
-                if (line[1..].Split("=")[1].Replace(" ", "").StartsWith("|"))
+                if (line[1..].Split("=")[1].Replace(" ", "").StartsWith(Special.specialChars[(int)Special.SpecialCharacters.array]))
                 {
-                    Program.arrays.Add(line[1..].Split("=")[0].Replace(" ", ""), new List<string>(line[1..].Split("|")[1].Split(",")));
+                    Program.arrays.Add(line[1..].Split("=")[0].Replace(" ", ""), new List<string>(line[1..].Split(Special.specialChars[(int)Special.SpecialCharacters.array])[1].Split(",")));
                     goto endOfDefine;
                 }
                 if (line[1..].Split("=")[1].Replace(" ", "").StartsWith("$"))           // Variable -> Variable
