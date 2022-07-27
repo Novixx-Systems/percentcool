@@ -3,10 +3,6 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Net;
 
-#if DEBUG
-#error Use in Release mode
-#endif
-
 namespace percentCool
 {
     internal class Parser
@@ -45,10 +41,11 @@ namespace percentCool
 
         public static int Parse(string lineToParse, HttpListenerContext context)
         {
+            Utils.Init();
             line = lineToParse;
             ctx = context;
 
-            int i=0;
+            int i = 0;
             foreach (var keyword in keywords)
             {
                 if (line.StartsWith(keyword.Key))
@@ -72,17 +69,8 @@ namespace percentCool
         #region Operators
         public static void Op_DollarEquals()
         {
-            if (line.Substring(2, 1) == "$" && Program.isVariable(line[3..].Replace(" ", "")))
-            {
-                // Print formatted string
-                Program.variables.TryGetValue(line[3..].Replace(" ", ""), out string varcont);
-                Program.FormattedPrint(varcont);
-            }
-            else
-            {
-                // Print formatted string
-                Program.FormattedPrint(line[2..]);
-            }
+            Utils.currentChar = 2;
+            Program.FormattedPrint(Utils.GetString());
         }
         public static void Op_Dollar()
         {
@@ -137,22 +125,27 @@ endOfDefine:
         #region Keywords
         public static void Kw_Echo()
         {
-            if (line.Substring(5, 1) == "$" && Program.isVariable(line[6..].Replace(" ", "")))
-            {
-                Program.variables.TryGetValue(line[6..].Replace(" ", ""), out string varcont);
-                Program.FormattedPrint(varcont);
-            }
-            else
-            {
-                Program.pageData += line[5..];
-            }
+            Utils.currentChar = 5;
+            Program.pageData += Utils.GetString();
         }
 
         public static void Kw_Rndmax()
         {
             if (line.Split(" ").Length > 1)
             {
-                Program.randMax = int.Parse(line.Split(" ")[1]);
+                Utils.currentChar = 7;
+                try
+                {
+                    Program.randMax = int.Parse(Utils.GetString());
+                }
+                catch
+                {
+                    Program.randMax = Utils.defaultReturnValue;
+                }
+            }
+            else
+            {
+                Program.randMax = Utils.defaultReturnValue;
             }
         }
 
@@ -160,24 +153,17 @@ endOfDefine:
         {
             if (line.Split(" ").Length > 2)
             {
-                try
-                {
-                    List<string> sessionvalues = System.IO.File.ReadLines(System.IO.Path.Combine(Program.sessionpath, ctx.Response.Cookies["session"].Value)).Where(l => l.StartsWith(line.Split(" ")[1])).ToList();
-                    if (line[(12 + line.Split(" ")[1].Length)..].StartsWith("$") && Program.isVariable(line[(13 + line.Split(" ")[1].Length)..]))
-                    {
-                        sessionvalues.Add(line.Split(" ")[1] + ":" + Program.variables[line[(13 + line.Split(" ")[1].Length)..]]);
-                    }
-                    else
-                    {
-                        sessionvalues.Add(line.Split(" ")[1] + ":" + line[(12 + line.Split(" ")[1].Length)..]);
-                    }
-                    System.IO.File.WriteAllLines(System.IO.Path.Combine(Program.sessionpath, ctx.Response.Cookies["session"].Value), sessionvalues);
-                }
-                catch
+                if (ctx.Response.Cookies["session"] == null)
                 {
                     Program.Error("Session not set. Use newsession to create a session");
                     error = 1;
+                    return;
                 }
+                List<string> sessionvalues = System.IO.File.ReadLines(System.IO.Path.Combine(Program.sessionpath, ctx.Response.Cookies["session"].Value)).Where(l => l.StartsWith(line.Split(" ")[1])).ToList();
+                Utils.currentChar = 11 + line.Split(" ")[1].Length;
+                sessionvalues.Add(line.Split(" ")[1] + ":" + Utils.GetString());
+                System.IO.File.WriteAllLines(System.IO.Path.Combine(Program.sessionpath, ctx.Response.Cookies["session"].Value), sessionvalues);
+
             }
         }
 
@@ -185,18 +171,28 @@ endOfDefine:
         {
             if (line.Split(" ").Length > 1)
             {
-                try
+                if (ctx.Response.Cookies["session"] == null)
                 {
-                    List<string> sessionvalues = System.IO.File.ReadLines(System.IO.Path.Combine(Program.sessionpath, ctx.Response.Cookies["session"].Value)).ToList();
+                    Program.Error("Session not set. Use newsession to create a session");
+                    error = 1;
+                    return;
+                }
+                List<string> sessionvalues = System.IO.File.ReadLines(System.IO.Path.Combine(Program.sessionpath, ctx.Response.Cookies["session"].Value)).ToList();
+                if (sessionvalues.Count > 0)
+                {
                     if (Program.isVariable("_SESSIONGET"))
                     {
                         Program.variables.Remove("_SESSIONGET");
                     }
                     List<string> resultList = sessionvalues.Where(r => r.StartsWith(line.Split(" ")[1])).ToList();
-                    Program.variables.Add("_SESSIONGET", resultList[0][(resultList[0].Split(":")[0].Length + 1)..]);
+                    Program.variables.Add("_SESSIONGET", resultList[0][(resultList[0].Split(":")[0].Length + 2)..]);
                 }
-                catch
+                else
                 {
+                    if (Program.isVariable("_SESSIONGET"))
+                    {
+                        Program.variables.Remove("_SESSIONGET");
+                    }
                     Program.variables.Add("_SESSIONGET", "");
                 }
             }
@@ -206,12 +202,9 @@ endOfDefine:
 
             if (!Program.cookies.ContainsKey(ctx.Request.RemoteEndPoint.ToString()))
             {
-                try
+                if (ctx.Response.Cookies["session"] != null)
                 {
                     System.IO.File.Delete(System.IO.Path.Combine(Program.sessionpath, ctx.Response.Cookies["session"].Value));      // Try to delete old session
-                }
-                catch
-                {
                 }
                 string session = Program.NewString(32);
                 while (System.IO.File.Exists(System.IO.Path.Combine(Program.sessionpath, session)))

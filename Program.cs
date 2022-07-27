@@ -580,7 +580,10 @@ namespace percentCool
             }
             sessionpath = System.IO.Path.Combine(Environment.CurrentDirectory, "sessions");
             Environment.CurrentDirectory = System.IO.Path.Combine(Environment.CurrentDirectory, "www");
+
             Parser.Init();
+            Utils.Init();
+
             // Create a Http server and start listening for incoming connections
             listener = new HttpListener();
             listener.Prefixes.Add(url);
