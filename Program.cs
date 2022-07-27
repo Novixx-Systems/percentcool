@@ -13,7 +13,7 @@ using System.Web;
 
 namespace percentCool
 {
-    internal class Program
+    internal static class Program
     {
         public static Random random = new();
         public static bool skipIfStmtElse = false;
@@ -282,6 +282,11 @@ namespace percentCool
             }
             return false;
         }
+
+        public static void FormattedPrint(string toPrint)
+        {
+            pageData += Format(toPrint);
+        }
         /// <summary>
         /// Formats a string using a weird formatting thing
         /// </summary>
@@ -290,10 +295,6 @@ namespace percentCool
         public static string Format(string toFormat)
         {
             return toFormat.Replace("$", pageData).Replace("%%", "&#x25;").Replace("%", version).Replace("\\rnd", random.Next(0, randMax).ToString());
-        }
-        public static void FormattedPrint(string toPrint)
-        {
-            pageData += Format(toPrint);
         }
         // Parse COOL code
         public static void ParseCOOL(string code, HttpListenerRequest req, HttpListenerContext ctx, bool included)
@@ -425,347 +426,8 @@ namespace percentCool
                     firstPercent = true;
                 }
                 if (doingPercent && !firstPercent)              // If we are in percent mode...
-                {
-                    if (line.StartsWith("$="))  // Echo (formatted)
-                    {
-                        if (line.Substring(2, 1) == "$" && isVariable(line[3..].Replace(" ", "")))
-                        {
-                            // Print formatted string
-                            variables.TryGetValue(line[3..].Replace(" ", ""), out string varcont);
-                            FormattedPrint(varcont);
-                        }
-                        else
-                        {
-                            // Print formatted string
-                            FormattedPrint(line[2..]);
-                        }
-                    }
-                    else if (line.StartsWith("echo "))  // Echo
-                    {
-                        if (line.Substring(5, 1) == "$" && isVariable(line[6..].Replace(" ", "")))
-                        {
-                            variables.TryGetValue(line[6..].Replace(" ", ""), out string varcont);
-                            FormattedPrint(varcont);
-                        }
-                        else
-                        {
-                            pageData += line[5..];
-                        }
-                    }
-                    // Include
-                    else if (line.StartsWith("include "))  // Include
-                    {
-                        if (System.IO.File.Exists(line[8..]))
-                        {
-                            ParseCOOL(System.IO.File.ReadAllText(line[8..]), req, ctx, true);
-                        }
-                        else
-                        {
-                            Error("Cannot open " + line[8..]);
-                        }
-                    }
-                    // Set random max
-                    else if (line.StartsWith("rndmax "))  // Rndmax
-                    {
-                        if (line.Split(" ").Length > 1)
-                        {
-                            randMax = int.Parse(line.Split(" ")[1]);
-                        }
-                    }
-                    else if (line.StartsWith("sessionset "))    // arg1 = variable name, arg2 = variable value
-                    {
-                        if (line.Split(" ").Length > 2)
-                        {
-                            try
-                            {
-                                List<string> sessionvalues = System.IO.File.ReadLines(System.IO.Path.Combine(sessionpath, ctx.Response.Cookies["session"].Value)).Where(l => l.StartsWith(line.Split(" ")[1])).ToList();
-                                if (line[(12 + line.Split(" ")[1].Length)..].StartsWith("$") && isVariable(line[(13 + line.Split(" ")[1].Length)..]))
-                                {
-                                    sessionvalues.Add(line.Split(" ")[1] + ":" + variables[line[(13 + line.Split(" ")[1].Length)..]]);
-                                }
-                                else
-                                {
-                                    sessionvalues.Add(line.Split(" ")[1] + ":" + line[(12 + line.Split(" ")[1].Length)..]);
-                                }
-                                System.IO.File.WriteAllLines(System.IO.Path.Combine(sessionpath, ctx.Response.Cookies["session"].Value), sessionvalues);
-                            }
-                            catch
-                            {
-                                Error("Session not set. Use newsession to create a session");
-                            }
-                        }
-                    }
-                    else if (line.StartsWith("sessionget "))        // Get session
-                    {
-                        if (line.Split(" ").Length > 1)
-                        {
-                            try
-                            {
-                                List<string> sessionvalues = System.IO.File.ReadLines(System.IO.Path.Combine(sessionpath, ctx.Response.Cookies["session"].Value)).ToList();
-                                if (isVariable("_SESSIONGET"))
-                                {
-                                    variables.Remove("_SESSIONGET");
-                                }
-                                List<string> resultList = sessionvalues.Where(r => r.StartsWith(line.Split(" ")[1])).ToList();
-                                variables.Add("_SESSIONGET", resultList[0][(resultList[0].Split(":")[0].Length + 1)..]);
-                            }
-                            catch
-                            {
-                                variables.Add("_SESSIONGET", "");
-                            }
-                        }
-                    }
-                    else if (line == "newsession")
-                    {
-                        if (!cookies.ContainsKey(ctx.Request.RemoteEndPoint.ToString()))
-                        {
-                            try
-                            {
-                                System.IO.File.Delete(System.IO.Path.Combine(sessionpath, ctx.Response.Cookies["session"].Value));      // Try to delete old session
-                            }
-                            catch
-                            {
-                            }
-                            string session = NewString(32);
-                            while (System.IO.File.Exists(System.IO.Path.Combine(sessionpath, session)))
-                            {
-                                session = NewString(32);
-                            }
-                            ctx.Response.Cookies.Clear();
-                            Cookie cookie = new Cookie("session", session)
-                            {
-                                Expires = DateTime.Now.AddDays(2)
-                            };
-                            ctx.Response.Cookies.Add(cookie);
-                            cookies.Remove(ctx.Request.RemoteEndPoint.ToString());
-
-                            cookies.Add(ctx.Request.RemoteEndPoint.ToString(), cookie);
-                            System.IO.File.Create(System.IO.Path.Combine(sessionpath, ctx.Response.Cookies["session"].Value)).Close();
-                        }
-
-                        if (!isVariable("_ISSESSION"))
-                        {
-                            variables.Add("_ISSESSION", "yes");
-                        }
-
-                    }
-                    // Unlink deletes a file, use with caution!
-                    else if (line.StartsWith("unlink "))
-                    {
-                        if (line.Substring(7, 1) == "$" && isVariable(line[8..].Replace(" ", "")))
-                        {
-                            variables.TryGetValue(line[8..].Replace(" ", ""), out string varcont);
-                            System.IO.File.Delete(System.IO.Path.Combine(Environment.CurrentDirectory, varcont));
-                        }
-                        else
-                        {
-                            System.IO.File.Delete(System.IO.Path.Combine(Environment.CurrentDirectory, line[7..]));
-                        }
-                    }
-                    else if (line[..1] == "$")  // Starts with a variable
-                    {
-                        if (line.Contains("@=="))
-                        {
-                            if (isArray(line[1..].Split("@==")[0].Replace(" ", "").Replace("|", "")))   // If it's an array
-                            {
-                                arrays[line[1..].Split("@==")[0].Replace(" ", "").Replace("|", "")].Add(line.Split("@==")[1].TrimStart()); // Insert into array
-                            }
-                            if (isVariable(line[1..].Split("@==")[0].Replace(" ", "")))
-                            {
-                                variables.Remove(line[1..].Split("@==")[0].Replace(" ", ""));
-                            }
-                            variables.Add(line[1..].Split("@==")[0].Replace(" ", ""), Format(line.Split("@==")[1].TrimStart()));
-                            goto endOfDefine;
-                        }
-                        if (line.Contains("="))        // Array or variable
-                        {
-                            if (isArray(line[1..].Split("=")[0].Replace(" ", "").Replace("|", "")))
-                            {
-                                arrays.Remove(line[1..].Split("=")[0].Replace(" ", "").Replace("|", ""));
-                            }
-                            if (isVariable(line[1..].Split("=")[0].Replace(" ", "").Replace("{", "")))
-                            {
-                                variables.Remove(line[1..].Split("=")[0].Replace(" ", "").Replace("{", ""));
-                            }
-                            if (line[1..].Split("=")[1].Replace(" ", "").StartsWith("|"))
-                            {
-                                arrays.Add(line[1..].Split("=")[0].Replace(" ", ""), new List<string>(line[1..].Split("|")[1].Split(",")));
-                                goto endOfDefine;
-                            }
-                            if (line[1..].Split("=")[1].Replace(" ", "").StartsWith("$"))           // Variable -> Variable
-                            {
-                                if (isVariable(line[1..].Replace(" ", "").Split("=")[1][1..]))
-                                {
-                                    variables.Add(line[1..].Split("=")[0].Replace(" ", ""), variables[line[1..].Replace(" ", "").Split("=")[1][1..]]);
-                                    goto endOfDefine;
-                                }
-                            }
-                            variables.Add(line[1..].Split("=")[0].Replace(" ", ""), line.Split("=")[1].TrimStart());
-                        }
-                        else
-                        {
-                            Error("Invalid argument for variable");
-                            return;
-                        }
-endOfDefine:
-                        ((Action)(() => { }))();    // Nothing
-                    }
-                    // Here comes the if statement...
-                    else if (line.StartsWith("if "))
-                    {
-                        if (line.Contains("="))
-                        {
-                            string toCheck = line[3..].Split("=")[0].TrimEnd();        // Just some stuff that makes
-                                                                                       // it contain the first argument
-                            if (line.Substring(3, 1) == "$" && isVariable(line[4..].Split("=")[0].Trim()))
-                            {
-                                variables.TryGetValue(line[4..].Split("=")[0].TrimEnd(), out string varcont);
-                                toCheck = varcont;
-                            }
-                            string secondCheck = line[3..].Split("=")[1].TrimStart();        // The thing to compare to
-                            if (line.Split("=")[1].Trim() == "NULL" && !isVariable(line[4..].Split("=")[0].Trim()))
-                            {
-                                toCheck = null;
-                                secondCheck = null;
-                            }
-                            if (line.Split("=")[1].Trim() == "NOTHING")
-                            {
-                                secondCheck = "";
-                            }
-                            if (line.Split("=")[1].Trim()[..1] == "$" && isVariable(line[4..].Split("=")[1].Trim()[1..]))
-                            {
-                                variables.TryGetValue(line[4..].Split("=")[1].Trim()[1..], out string varcont);
-                                secondCheck = varcont;
-                            }
-                            if (toCheck != secondCheck)
-                            {
-                                skipIfStmtElse = true;
-                            }
-                            else
-                            {
-                                skipElseStmt = true;
-                            }
-                        }
-                    }
-                    else if (line.StartsWith("getdate "))
-                    {
-                        if (line.Split(" ").Length > 1)
-                        {
-                            if (isVariable(line.Split(" ")[1]))
-                            {
-                                variables.Remove(line.Split(" ")[1]);
-                            }
-                            variables.Add(line.Split(" ")[1], DateTime.UtcNow.ToString("yyyy-MM-dd"));
-                        }
-                    }
-                    else if (line.StartsWith("foreach "))
-                    {
-                        if (line.Split(" ").Length > 1)
-                        {
-                            if (line.Split(" ")[1][..1] == "$")
-                            {
-                                if (isArray(line.Split(" ")[1][1..]))
-                                {
-                                    loopThrough = line.Split(" ")[1];
-                                    if (arrays[loopThrough[1..]].Count > 0)
-                                    {
-                                        loopCount = 0;
-
-                                        inLoop = true;
-
-                                        if (isVariable("i"))
-                                        {
-                                            variables.Remove("i");
-                                        }
-                                        variables.Add("i", arrays[loopThrough[1..]][loopCount]);
-                                    }
-                                }
-                                else
-                                {
-                                    Error("Not an array");
-                                    return;
-                                }
-                            }
-                            else
-                            {
-                                Error("Variable expected");
-                                return;
-                            }
-                        }
-                    }
-                    else if (line.StartsWith("sqlquery "))
-                    {
-                        if (database != null)
-                        {
-                            Query(line[9..]);
-                        }
-                        else
-                        {
-                            Error("Use sqlconnect before sqlquery");
-                            return;
-                        }
-                    }
-                    else if (line.StartsWith("escape "))
-                    {
-                        if (line.Split(" ").Length > 1 && line.Split(" ")[1][0] == '$')
-                        {
-                            variables[line.Split(" ")[1][1..]] = safeEscape(variables[line.Split(" ")[1][1..]]);
-                        }
-                        else
-                        {
-                            Error("Variable expected");
-                            return;
-                        }
-                    }
-                    else if (line.StartsWith("replace "))
-                    {
-                        if (line.Split(" ").Length > 3 && line.Split(" ")[1][0] == '$')
-                        {
-                            if (isVariable(line.Split(" ")[1][1..]))
-                            {
-                                variables[line.Split(" ")[1][1..]] = variables[line.Split(" ")[1][1..]].Replace(line.Split(" ")[2], line.Split(" ")[3]);
-                            }
-                        }
-                        else
-                        {
-                            Error("Variable expected");
-                            return;
-                        }
-                    }
-                    else if (line.StartsWith("sqlconnect "))
-                    {
-                        if (line.Split(" ").Length != 5)
-                        {
-                            Error("Expected 4 arguments (sqlconnect)");
-                            return;
-                        }
-                        InitializeSQL(line.Split(" ")[1], line.Split(" ")[2], line.Split(" ")[3], line.Split(" ")[4]);
-                    }
-                    else if (line.StartsWith("arraytovars "))    // Convert arrays to variables, an array containing "abc, a" will
-                                                                 // make two variables called $a1 and $a2, $a1 contains abc and $a2 contains a
-                    {
-                        if (line.Split(" ")[1].StartsWith("$"))
-                        {
-                            if (isArray(line.Split(" ")[1][1..]))
-                            {
-                                int thing = 0;
-                                foreach (string value in arrays[line.Split(" ")[1][1..]])
-                                {
-                                    thing++;
-                                    if (isVariable("a" + thing.ToString()))
-                                    {
-                                        variables.Remove("a" + thing.ToString());
-                                    }
-                                    variables.Add("a" + thing.ToString(), value);
-                                }
-                            }
-                            else
-                            {
-                                Error("Cannot find variable " + line.Split(" ")[1][1..] + ", or not an array");
-                            }
-                        }
-                    }
-                    else if (line.StartsWith("//"))
+                { 
+                    if (line.StartsWith("//"))
                     {
                     }
                     else if (line == "stopif")
@@ -777,11 +439,31 @@ endOfDefine:
                     else if (line == "else")
                     {
                     }
+                    // Include is not part of the parser
+                    else if (line.StartsWith("include "))  // Include
+                    {
+                        if (System.IO.File.Exists(line[8..]))
+                        {
+                            ParseCOOL(System.IO.File.ReadAllText(line[8..]), req, ctx, true);
+                        }
+                        else
+                        {
+                            Error("Cannot open " + line[8..]);
+                        }
+                    }
                     else if (line.StartsWith("%>"))
                     {
                         doingPercent = false;
                     }
-                    else { Error("Unknown statement " + line); return; }
+                    else 
+                    {
+                        int t = Parser.Parse(line, ctx);
+                        if (t == 2)
+                        {
+                            Error("Unknown statement " + line);
+                            return;
+                        }
+                    }
                 }
                 else
                 {
@@ -898,6 +580,7 @@ endOfDefine:
             }
             sessionpath = System.IO.Path.Combine(Environment.CurrentDirectory, "sessions");
             Environment.CurrentDirectory = System.IO.Path.Combine(Environment.CurrentDirectory, "www");
+            Parser.Init();
             // Create a Http server and start listening for incoming connections
             listener = new HttpListener();
             listener.Prefixes.Add(url);
