@@ -118,8 +118,7 @@ namespace percentCool.Utilities
                 error = 1;
                 return;
             }
-endOfDefine:
-            ((Action)(() => { }))();    // Nothing
+        endOfDefine:;
         }
         #endregion
         #region Keywords
