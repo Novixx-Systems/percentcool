@@ -32,12 +32,13 @@ namespace percentCool.Utilities
             sb.Append(text, p, text.Length - p);
             return sb.ToString();
         }
-        public static string GetString()
+        public static string GetString(string[] args, int arg = 0)
         {
             string returnValue;
             try
             {
-                returnValue = Parser.line[currentChar..];
+                //returnValue = Parser.line[currentChar..];
+                returnValue = args[arg];
             }
             catch
             {
