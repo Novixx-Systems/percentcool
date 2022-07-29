@@ -16,7 +16,7 @@ This is a tutorial on how to program in percentCool, this tutorial is a work-in-
 3. paste the following Hello World code:
 ```
     <%cool
-    echo Hello World
+    echo "Hello World"
     %>
 ```
 
