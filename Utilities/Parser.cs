@@ -69,8 +69,10 @@ namespace percentCool.Utilities
         #region Operators
         public static void Op_DollarEquals()
         {
+            string[] args = CodeParser.ParseLineIntoTokens(line);
+
             Utils.currentChar = 2;
-            Program.FormattedPrint(Utils.GetString());
+            Program.FormattedPrint(Utils.GetString(args, 1));
         }
         public static void Op_Dollar()
         {
@@ -125,18 +127,22 @@ endOfDefine:
         #region Keywords
         public static void Kw_Echo()
         {
+            string[] args = CodeParser.ParseLineIntoTokens(line);
+
             Utils.currentChar = 5;
-            Program.pageData += Utils.GetString();
+            Program.pageData += Utils.GetString(args, 1);
         }
 
         public static void Kw_Rndmax()
         {
-            if (line.Split(" ").Length > 1)
+            string[] args = CodeParser.ParseLineIntoTokens(line);
+
+            if (args.Length > 1)
             {
                 Utils.currentChar = 7;
                 try
                 {
-                    Program.randMax = int.Parse(Utils.GetString());
+                    Program.randMax = int.Parse(Utils.GetString(args, 1));
                 }
                 catch
                 {
@@ -151,7 +157,9 @@ endOfDefine:
 
         public static void Kw_Sessionset()
         {
-            if (line.Split(" ").Length > 2)
+            string[] args = CodeParser.ParseLineIntoTokens(line);
+
+            if (args.Length > 2)
             {
                 if (ctx.Response.Cookies["session"] == null)
                 {
@@ -159,9 +167,9 @@ endOfDefine:
                     error = 1;
                     return;
                 }
-                List<string> sessionvalues = System.IO.File.ReadLines(System.IO.Path.Combine(Program.sessionpath, ctx.Response.Cookies["session"].Value)).Where(l => l.StartsWith(line.Split(" ")[1])).ToList();
-                Utils.currentChar = 11 + line.Split(" ")[1].Length;
-                sessionvalues.Add(line.Split(" ")[1] + ":" + Utils.GetString());
+                List<string> sessionvalues = System.IO.File.ReadLines(System.IO.Path.Combine(Program.sessionpath, ctx.Response.Cookies["session"].Value)).Where(l => l.StartsWith(args[1])).ToList();
+                Utils.currentChar = 11 + args[1].Length;
+                sessionvalues.Add(args[1] + ":" + Utils.GetString(args, 2));
                 System.IO.File.WriteAllLines(System.IO.Path.Combine(Program.sessionpath, ctx.Response.Cookies["session"].Value), sessionvalues);
 
             }
@@ -169,7 +177,9 @@ endOfDefine:
 
         public static void Kw_Sessionget()
         {
-            if (line.Split(" ").Length > 1)
+            string[] args = CodeParser.ParseLineIntoTokens(line);
+
+            if (args.Length > 1)
             {
                 if (ctx.Response.Cookies["session"] == null)
                 {
@@ -184,7 +194,7 @@ endOfDefine:
                     {
                         Program.variables.Remove("_SESSIONGET");
                     }
-                    List<string> resultList = sessionvalues.Where(r => r.StartsWith(line.Split(" ")[1])).ToList();
+                    List<string> resultList = sessionvalues.Where(r => r.StartsWith(args[1])).ToList();
                     Program.variables.Add("_SESSIONGET", resultList[0][(resultList[0].Split(":")[0].Length + 2)..]);
                 }
                 else
@@ -269,25 +279,27 @@ endOfDefine:
         }
         public static void Kw_Getdate()
         {
-            if (line.Split(" ").Length > 1)
+            string[] args = CodeParser.ParseLineIntoTokens(line);
+            if (args.Length > 1)
             {
-                if (Program.isVariable(line.Split(" ")[1]))
+                if (Program.isVariable(args[1]))
                 {
-                    Program.variables.Remove(line.Split(" ")[1]);
+                    Program.variables.Remove(args[1]);
                 }
-                Program.variables.Add(line.Split(" ")[1], DateTime.UtcNow.ToString("yyyy-MM-dd"));
+                Program.variables.Add(args[1], DateTime.UtcNow.ToString("yyyy-MM-dd"));
             }
         }
         public static void Kw_Foreach()
         {
+            string[] args = CodeParser.ParseLineIntoTokens(line);
 
-            if (line.Split(" ").Length > 1) // Check for argument
+            if (args.Length > 1) // Check for argument
             {
-                if (line.Split(" ")[1][..1] == "$") // Check if it's a variable
+                if (args[1][..1] == "$") // Check if it's a variable
                 {
-                    if (Program.isArray(line.Split(" ")[1][1..]))
+                    if (Program.isArray(args[1][1..]))
                     {
-                        Program.loopThrough = line.Split(" ")[1];
+                        Program.loopThrough = args[1];
                         if (Program.arrays[Program.loopThrough[1..]].Count > 0)
                         {
                             Program.loopCount = 0;
@@ -331,9 +343,11 @@ endOfDefine:
         }
         public static void Kw_Escape()
         {
-            if (line.Split(" ").Length > 1 && line.Split(" ")[1][0] == '$')
+            string[] args = CodeParser.ParseLineIntoTokens(line);
+
+            if (args.Length > 1 && args[1][0] == '$')
             {
-                Program.variables[line.Split(" ")[1][1..]] = Program.safeEscape(Program.variables[line.Split(" ")[1][1..]]);
+                Program.variables[args[1][1..]] = Program.safeEscape(Program.variables[args[1][1..]]);
             }
             else
             {
@@ -344,11 +358,12 @@ endOfDefine:
         }
         public static void Kw_Replace()
         {
-            if (line.Split(" ").Length > 3 && line.Split(" ")[1][0] == '$')
+            string[] args = CodeParser.ParseLineIntoTokens(line);
+            if (args.Length > 3 && args[1][0] == '$')
             {
-                if (Program.isVariable(line.Split(" ")[1][1..]))
+                if (Program.isVariable(args[1][1..]))
                 {
-                    Program.variables[line.Split(" ")[1][1..]] = Program.variables[line.Split(" ")[1][1..]].Replace(line.Split(" ")[2], line.Split(" ")[3]);
+                    Program.variables[args[1][1..]] = Program.variables[args[1][1..]].Replace(args[2], args[3]);
                 }
             }
             else
@@ -360,26 +375,28 @@ endOfDefine:
         }
         public static void Kw_Sqlconnect()  // Create a new connection
         {
-            if (line.Split(" ").Length != 5)
+            string[] args = CodeParser.ParseLineIntoTokens(line);
+            if (args.Length != 5)
             {
                 Program.Error("Expected 4 arguments (sqlconnect)");
                 error = 1;
                 return;
             }
-            Program.InitializeSQL(line.Split(" ")[1], line.Split(" ")[2], line.Split(" ")[3], line.Split(" ")[4]);
+            Program.InitializeSQL(args[1], args[2], args[3], args[4]);
         }
 
         // Convert arrays to variables, an array containing "abc, a" will
         // make two variables called $a1 and $a2, $a1 contains abc and $a2 contains a
         public static void Kw_Arraytovars()
         {
+            string[] args = CodeParser.ParseLineIntoTokens(line);
 
-            if (line.Split(" ")[1].StartsWith("$"))
+            if (args[1].StartsWith("$"))
             {
-                if (Program.isArray(line.Split(" ")[1][1..]))
+                if (Program.isArray(args[1][1..]))
                 {
                     int thing = 0;
-                    foreach (string value in Program.arrays[line.Split(" ")[1][1..]])
+                    foreach (string value in Program.arrays[args[1][1..]])
                     {
                         thing++;
                         if (Program.isVariable("a" + thing.ToString()))
@@ -391,7 +408,7 @@ endOfDefine:
                 }
                 else
                 {
-                    Program.Error("Cannot find variable " + line.Split(" ")[1][1..] + ", or not an array");
+                    Program.Error("Cannot find variable " + args[1][1..] + ", or not an array");
                     error = 1;
                 }
             }
