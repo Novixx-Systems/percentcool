@@ -11,8 +11,8 @@ namespace percentCool.Utilities
         static int c = 0;
         static string cStr = "";
         static char currentChar => cStr[c];
-        static char previousChar => (c-1 >= 0 ? cStr[c] : '\0');
-
+        static char previousChar => (c-1 >= 0 ? cStr[c-1] : '\0');
+        static char nextChar => (c + 1 < cStr.Length ? cStr[c + 1] : '\0');
 
         public static string[] ParseLineIntoTokens(string inp)
         {
@@ -47,7 +47,7 @@ namespace percentCool.Utilities
                     }
                     else
                     {
-                        temp += currentChar;
+                        temp += (currentChar == '\\' && nextChar == '"') ? "" : currentChar;
                     }
                 }
 
