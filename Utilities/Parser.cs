@@ -89,7 +89,7 @@ namespace percentCool.Utilities
                 Program.variables.Add(line[1..].Split("@==")[0].Replace(" ", ""), Program.Format(line.Split("@==")[1].TrimStart()));
                 goto endOfDefine;
             }
-            if (line.Contains("="))        // Array or variable
+            else if (line.Contains("="))        // Array or variable
             {
                 if (Program.isArray(line[1..].Split("=")[0].Replace(" ", "").Replace(Special.specialChars[(int)Special.SpecialCharacters.array], "")))
                 {

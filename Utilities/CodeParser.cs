@@ -32,13 +32,15 @@ namespace percentCool.Utilities
                         tokens.Add(temp);
                         temp = "";
                         isReadingString = false;
-                    }else
+                    }
+                    else
                     {
                         if(temp != string.Empty) tokens.Add(temp);
                         temp = "";
                         isReadingString = true;
                     }
-                }else
+                }
+                else
                 {
                     if (!isReadingString && currentChar == ' ')
                     {

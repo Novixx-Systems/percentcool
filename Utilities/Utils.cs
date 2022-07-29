@@ -46,7 +46,7 @@ namespace percentCool.Utilities
             }
             foreach (string var in Program.variables.Keys)
             {
-                returnValue = returnValue.ReplaceWord("$" + var, Program.variables[var]);
+                returnValue = returnValue.ReplaceWord("$" + var, " " + Program.variables[var]);
             }
             return returnValue;
         }
