@@ -29,7 +29,7 @@ namespace percentCool.Utilities
                 if(previousChar != '\\' && currentChar == '"')
                 {
                     if(isReadingString) {
-                        tokens.Add(temp);
+                        if (temp != string.Empty) tokens.Add(temp);
                         temp = "";
                         isReadingString = false;
                     }
@@ -44,7 +44,7 @@ namespace percentCool.Utilities
                 {
                     if (!isReadingString && currentChar == ' ')
                     {
-                        tokens.Add(temp);
+                        if (temp != string.Empty) tokens.Add(temp);
                         temp = "";
                     }
                     else

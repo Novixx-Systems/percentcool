@@ -37,6 +37,8 @@ namespace percentCool.Utilities
             keywords.Add("replace ", new Action(Kw_Replace));
             keywords.Add("sqlconnect ", new Action(Kw_Sqlconnect));
             keywords.Add("arraytovars ", new Action(Kw_Arraytovars));
+            keywords.Add("hash ", new Action(Kw_Hash));
+            keywords.Add("hashcompare ", new Action(Kw_CompareHash));
         }
 
         public static int Parse(string lineToParse, HttpListenerContext context)
@@ -152,6 +154,23 @@ namespace percentCool.Utilities
             {
                 Program.randMax = Utils.defaultReturnValue;
             }
+        }
+
+        public static void Kw_Hash()
+        {
+            string[] args = CodeParser.ParseLineIntoTokens(line);
+            string target = Utils.GetString(args, 1);
+
+            Program.variables.Add("_HASH", BCrypt.Net.BCrypt.HashPassword(target));
+        }
+
+        public static void Kw_CompareHash()
+        {
+            string[] args = CodeParser.ParseLineIntoTokens(line);
+            string hash = Utils.GetString(args, 1, true);
+            string password = Utils.GetString(args, 2, true);
+
+            Program.variables.Add("_HASHVALID", BCrypt.Net.BCrypt.Verify(password, hash) ? "true" : "false");
         }
 
         public static void Kw_Sessionset()

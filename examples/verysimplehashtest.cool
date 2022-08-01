@@ -1,0 +1,6 @@
+<%cool
+    hash "abc"
+    echo $_HASH
+    hashcompare $_HASH "abc"
+    echo $_HASHVALID
+%>
