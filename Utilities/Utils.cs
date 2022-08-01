@@ -32,7 +32,7 @@ namespace percentCool.Utilities
             sb.Append(text, p, text.Length - p);
             return sb.ToString();
         }
-        public static string GetString(string[] args, int arg = 0)
+        public static string GetString(string[] args, int arg = 0, bool noSpace = false)
         {
             string returnValue;
             try
@@ -46,7 +46,7 @@ namespace percentCool.Utilities
             }
             foreach (string var in Program.variables.Keys)
             {
-                returnValue = returnValue.ReplaceWord("$" + var, " " + Program.variables[var]);
+                returnValue = returnValue.ReplaceWord("$" + var, (noSpace ? "" : " ") + Program.variables[var]);
             }
             return returnValue;
         }
