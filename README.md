@@ -20,7 +20,7 @@ This is a tutorial on how to program in percentCool, this tutorial is a work-in-
     %>
 ```
 
-you can ofcourse also use HTML. but when in "cool" mode you cannot use HTML.
+you can of course also use HTML. but when in "cool" mode you cannot use HTML.
 
 To use HTML, exit "cool" mode first, to do that, type
 ```
