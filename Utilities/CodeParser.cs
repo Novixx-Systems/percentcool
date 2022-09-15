@@ -58,7 +58,7 @@ namespace percentCool.Utilities
 
             if(isReadingString)
             {
-                Program.Error("Unterminated string!");
+                Program.Error("Unterminated string");
                 return new string[0];
             }
 
