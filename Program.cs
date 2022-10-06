@@ -393,11 +393,11 @@ namespace percentCool
                     {
                         if (line == "else")
                         {
-                            skipIfStmtElse = false;
+                            skipIfStmtElse = false; // endif
                         }
                         else if (line == "stopif")
                         {
-                            skipIfStmtElse = false;
+                            skipIfStmtElse = false; // endif
                         }
                     }
                     continue;
