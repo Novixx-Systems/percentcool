@@ -1,6 +1,8 @@
 [![Build](https://github.com/Novixx-Systems/percentcool/actions/workflows/dotnet.yml/badge.svg?branch=main)](https://github.com/Novixx-Systems/percentcool/actions/workflows/dotnet.yml)
 
 
+# Note
+This does not require any other webserver, since percentCool is technically a webserver
 
 # percentcool
 percentCool is a programming language for creating websites.
