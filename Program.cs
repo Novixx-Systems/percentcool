@@ -11,6 +11,7 @@ using MySql.Data.MySqlClient;
 using System.Linq;
 using System.Web;
 using percentCool.Utilities;
+using System.Globalization;
 
 namespace percentCool
 {
@@ -31,7 +32,7 @@ namespace percentCool
         public static HttpListener listener;
         public static string url = "http://*:8000/";
         public static int pageViews = 0;
-        public static int requestCount = 0;
+        public static ulong requestCount = 0;
         public static int randMax = 10;
         public static bool doingPercent = false;
         public static string where = "";
@@ -390,6 +391,7 @@ namespace percentCool
                 }
             }
             bool firstPercent;
+            int ifs = 1;
             for (var j = 0; j < code.Split(new char[] { '\n' }).Length; j++)
             {
                 i++;
@@ -399,13 +401,24 @@ namespace percentCool
                 {
                     if (doingPercent)
                     {
+                        if (line.StartsWith("if "))
+                        {
+                            ifs += 2;
+                        }
                         if (line == "else")
                         {
-                            skipIfStmtElse = false; // endif
+                            if (ifs <= 0)
+                            {
+                                skipIfStmtElse = false; // endif
+                            }
                         }
                         else if (line == "stopif")
                         {
-                            skipIfStmtElse = false; // endif
+                            ifs--;
+                            if (ifs <= 0)
+                            {
+                                skipIfStmtElse = false; // endif
+                            }
                         }
                     }
                     continue;
