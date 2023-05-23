@@ -41,6 +41,42 @@ namespace percentCool.Utilities
             keywords.Add("hash ", new Action(Kw_Hash));
             keywords.Add("hashcompare ", new Action(Kw_CompareHash));
             keywords.Add("mail ", new Action(Kw_Mail));
+            keywords.Add("existing ", new Action(Kw_Existing));
+        }
+
+        private static void Kw_Existing()
+        {
+            // This is a special keyword that is used to check if a variable exists
+
+            string varName = CodeParser.ParseLineIntoTokens(line)[1];
+            if (!varName.StartsWith("$"))
+            {
+                return;
+            }
+            varName = varName.Substring(1); // Remove the $ from the name
+
+            if (Program.variables.ContainsKey(varName))
+            {
+                if (Program.variables.ContainsKey("_EXISTS"))
+                {
+                    Program.variables["_EXISTS"] = "true";
+                }
+                else
+                {
+                    Program.variables.Add("_EXISTS", "true");
+                }
+            }
+            else
+            {
+                if (Program.variables.ContainsKey("_EXISTS"))
+                {
+                    Program.variables["_EXISTS"] = "false";
+                }
+                else
+                {
+                    Program.variables.Add("_EXISTS", "false");
+                }
+            }
         }
 
         private static void Kw_Mail()

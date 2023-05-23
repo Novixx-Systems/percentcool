@@ -32,7 +32,7 @@ namespace percentCool.Utilities
             sb.Append(text, p, text.Length - p);
             return sb.ToString();
         }
-        public static string GetString(string[] args, int arg = 0, bool noSpace = false)
+        public static string GetString(string[] args, int arg = 0, bool noSpace = true)
         {
             string returnValue;
             try

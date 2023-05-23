@@ -381,11 +381,11 @@ namespace percentCool
                     foreach (string eqStr in eq)
                     {
                         string[] nd = eqStr.Split("=");
-                        if (isVariable(nd[0]))
+                        if (isVariable("post." + nd[0]))
                         {
                             variables.Remove(nd[0]);
                         }
-                        variables.Add(nd[0], HttpUtility.UrlDecode(nd[1]));
+                        variables.Add("post." + nd[0], HttpUtility.UrlDecode(nd[1]));
                     }
                 }
             }
