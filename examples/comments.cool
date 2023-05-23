@@ -1,10 +1,10 @@
 <%cool
 sqlconnect host database user password
-if $comment = NULL
+if $post.comment = NULL
 else
 	// Add comment to database
-	escape $comment
-	sqlquery INSERT INTO comments (comment) VALUES ('$comment')
+	escape $post.comment
+	sqlquery INSERT INTO comments (comment) VALUES ('$post.comment')
 stopif
 %>
 <form method="post">
