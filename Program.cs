@@ -392,6 +392,7 @@ namespace percentCool
             }
             bool firstPercent;
             int ifs = 1;
+            skipIfStmtElse = false;
             for (var j = 0; j < code.Split(new char[] { '\n' }).Length; j++)
             {
                 i++;
@@ -403,7 +404,7 @@ namespace percentCool
                     {
                         if (line.StartsWith("if "))
                         {
-                            ifs += 2;
+                            ifs += 1;
                         }
                         if (line == "else")
                         {
