@@ -159,7 +159,7 @@ namespace percentCool.Utilities
         public static void Kw_Hash()
         {
             string[] args = CodeParser.ParseLineIntoTokens(line);
-            string target = Utils.GetString(args, 1);
+            string target = Utils.GetString(args, 1, true);
 
             Program.variables.Add("_HASH", BCrypt.Net.BCrypt.HashPassword(target));
         }

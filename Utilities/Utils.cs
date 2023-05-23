@@ -14,7 +14,7 @@ namespace percentCool.Utilities
         }
         public static string ReplaceWord(this string text, string word, string bywhat)
         {
-            static bool IsWordChar(char c) => char.IsLetterOrDigit(c) || c == '_';
+            static bool IsWordChar(char c) => char.IsLetterOrDigit(c) || c == '_' || c == '$';
             StringBuilder sb = null;
             int p = 0, j = 0;
             while (j < text.Length && (j = text.IndexOf(word, j, StringComparison.Ordinal)) >= 0)
