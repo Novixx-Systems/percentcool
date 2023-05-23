@@ -1,4 +1,5 @@
-﻿using System;
+﻿using Org.BouncyCastle.Asn1;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Net;
@@ -42,6 +43,54 @@ namespace percentCool.Utilities
             keywords.Add("hashcompare ", new Action(Kw_CompareHash));
             keywords.Add("mail ", new Action(Kw_Mail));
             keywords.Add("existing ", new Action(Kw_Existing));
+            keywords.Add("writefile ", new Action(Kw_Writefile));
+            keywords.Add("readfile ", new Action(Kw_Readfile));
+            keywords.Add("rmfile ", new Action(Kw_Rmfile));
+            keywords.Add("deletefile ", new Action(Kw_Rmfile)); // Alias for rmfile
+        }
+
+        private static void Kw_Readfile()
+        {
+            string[] args = CodeParser.ParseLineIntoTokens(line);
+            string filename = Utils.GetString(args, 1);
+
+            if (filename == string.Empty)
+            {
+                return;
+            }
+            if (System.IO.File.Exists(filename))
+            {
+                Program.variables["_FILE"] = System.IO.File.ReadAllText(filename);
+            }
+        }
+
+        private static void Kw_Rmfile()
+        {
+            string[] args = CodeParser.ParseLineIntoTokens(line);
+            string filename = Utils.GetString(args, 1);
+
+            if (filename == string.Empty)
+            {
+                return;
+            }
+            if (System.IO.File.Exists(filename))
+            {
+                System.IO.File.Delete(filename);
+            }
+        }
+
+        private static void Kw_Writefile()
+        {
+            string[] args = CodeParser.ParseLineIntoTokens(line);
+            string filename = Utils.GetString(args, 1);
+            string content = Utils.GetString(args, 2);
+
+            if (filename == string.Empty || content == string.Empty)
+            {
+                return;
+            }
+
+            System.IO.File.WriteAllText(filename, content);
         }
 
         private static void Kw_Existing()
