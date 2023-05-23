@@ -29,6 +29,7 @@ namespace percentCool.Utilities
                 if(previousChar != '\\' && currentChar == '"')
                 {
                     if(isReadingString) {
+                        temp = temp.Replace("\\n", "\n");
                         if (temp != string.Empty) tokens.Add(temp);
                         temp = "";
                         isReadingString = false;
