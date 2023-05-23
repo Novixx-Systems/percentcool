@@ -1,5 +1,5 @@
 <%cool
-// CoolioWiki - A Wikipedia clone in percentCool
+// CoolioWiki - A MediaWiki clone in percentCool
 // (c) 2023 Novixx Systems
 // THIS PROJECT IS MADE SO YOU CAN LEARN HOW TO MAKE A WEBSITE IN PERCENTCOOL
 
@@ -66,6 +66,9 @@ existing $url.page
 if $_EXISTS = true
     echo "<h2>$url.page</h2>"
     echo "<a href='?edit=$url.page&page=$url.page'>Edit</a>"
+	replace $content < &lt;
+	replace $content > &gt;
+	replace $content "\"" &quot;
     echo "<p>$content</p>"
 stopif
 existing $url.edit
@@ -89,9 +92,9 @@ if $_EXISTS = true
     // but percentCool does support writing strings without quotes
     replace $post.content "\n" <br>
 
-	replace $i < &lt;
-	replace $i > &gt;
-	replace $i "\"" &quot;
+	replace $post.content < &lt;
+	replace $post.content > &gt;
+	replace $post.content "\"" &quot;
     escape $post.content
     escape $url.save
 
