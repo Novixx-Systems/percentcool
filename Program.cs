@@ -243,7 +243,15 @@ namespace percentCool
                     };
 
                     //Execute query
-                    cmd.ExecuteNonQuery();
+                    try
+                    {
+                        cmd.ExecuteNonQuery();
+                    }
+                    catch
+                    {
+                        Error("An error occured with the SQL statement");
+
+                    }
                     connection.Close();
                     return null;
 
@@ -542,16 +550,20 @@ namespace percentCool
             "</html>";
                 if (System.IO.File.Exists(req.Url.AbsolutePath[1..]))
                 {
-                    where = req.Url.AbsolutePath[1..].Split(".")[1];
-                    if (where == "html" || where == "cool")
+                    try
                     {
-                        pageData = "";
-                        ParseCOOL(System.IO.File.ReadAllText(req.Url.AbsolutePath[1..]), req, ctx, false);
+                        where = req.Url.AbsolutePath[1..].Split(".")[1];
+                        if (where == "html" || where == "cool")
+                        {
+                            pageData = "";
+                            ParseCOOL(System.IO.File.ReadAllText(req.Url.AbsolutePath[1..]), req, ctx, false);
+                        }
+                        else
+                        {
+                            data = System.IO.File.ReadAllBytes(req.Url.AbsolutePath[1..]);
+                        }
                     }
-                    else
-                    {
-                        data = System.IO.File.ReadAllBytes(req.Url.AbsolutePath[1..]);
-                    }
+                    catch { }
                 }
                 else
                 {
