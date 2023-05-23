@@ -12,6 +12,7 @@ using System.Linq;
 using System.Web;
 using percentCool.Utilities;
 using System.Globalization;
+using System.IO;
 
 namespace percentCool
 {
@@ -116,7 +117,7 @@ namespace percentCool
         {
             return (source % multiple) == 0;
         }
-        public static string GetRequestPostData(HttpListenerRequest request)
+        public static byte[] GetRequestPostData(HttpListenerRequest request)
         {
             // https://stackoverflow.com/questions/5197579/getting-form-data-from-httplistenerrequest
             if (!request.HasEntityBody)
@@ -125,7 +126,7 @@ namespace percentCool
             }
             using System.IO.Stream body = request.InputStream; // here we have data
             using var reader = new System.IO.StreamReader(body, request.ContentEncoding);
-            return reader.ReadToEnd();
+            return request.ContentEncoding.GetBytes(reader.ReadToEnd());
         }
         //open connection to database
         private static bool OpenConnection()
@@ -273,6 +274,9 @@ namespace percentCool
             string errorContent = "percentCool error: " + errorReason + " at line " + (i + 1).ToString();
             pageData = errorContent;
             System.IO.File.AppendAllText("error_log", errorContent + "\n");
+            Console.ForegroundColor = ConsoleColor.Red;
+            Console.WriteLine(errorContent);
+            Console.ForegroundColor = ConsoleColor.White;
         }
 
         // Check if a string is a variable name
@@ -367,7 +371,7 @@ namespace percentCool
                 variables.Add("_TIME", DateTime.UtcNow.ToString("hh:mm:ss"));
                 variables.Add("_DATE", DateTime.UtcNow.ToString("yyyy-MM-dd"));
                 doingPercent = false;
-                string reqs = GetRequestPostData(req);
+                byte[] reqs = GetRequestPostData(req);
                 foreach (string item in req.QueryString)
                 {
                     if (isVariable("url." + item))
@@ -378,15 +382,66 @@ namespace percentCool
                 }
                 if (reqs != null)                       // Get post request into variable
                 {
-                    string[] eq = reqs.Split("&");
-                    foreach (string eqStr in eq)
+                    bool isMultipartFormdata = false;
+                    if (req.ContentType != null)
                     {
-                        string[] nd = eqStr.Split("=");
-                        if (isVariable("post." + nd[0]))
+                        if (req.ContentType.Contains("multipart/form-data;"))
                         {
-                            variables.Remove(nd[0]);
+                            isMultipartFormdata = true;
                         }
-                        variables.Add("post." + nd[0], HttpUtility.UrlDecode(nd[1]));
+                    }
+                    if (isMultipartFormdata)
+                    {
+                        string[] reqsArr = req.ContentEncoding.GetString(reqs).Split(new string[] { "\r\n" }, StringSplitOptions.None);
+                        foreach (string reqsItem in reqsArr)
+                        {
+                            if (reqsItem.Contains("name=\""))
+                            {
+                                string[] reqsItemArr = reqsItem.Split(new char[] { ';' });
+                                string[] reqsItemArr2 = reqsItemArr[1].Split(new char[] { '=' });
+                                string name = reqsItemArr2[1].Replace("\"", "");
+                                string type = reqsArr[Array.IndexOf(reqsArr, reqsItem) + 1];
+                                if (type != "")
+                                {
+                                    // Upload file
+                                    Console.ForegroundColor = ConsoleColor.Yellow;
+                                    Console.WriteLine("percentCool warning: File upload detected, this is still experimental and may not work for binaries");
+                                    Console.ForegroundColor = ConsoleColor.White;
+                                    string tempFileName = "atm_" + random.NextInt64(10101010101010, 99999999999999).ToString() + ".aks";
+                                    Utils.SaveFile(req.ContentEncoding.GetString(reqs), tempFileName); // Save it
+                                    if (isVariable("post." + name))
+                                    {
+                                        variables.Remove("post." + name);
+                                    }
+                                    variables.Add("post." + name, tempFileName);
+                                }
+                                else
+                                {
+                                    string value = reqsArr[Array.IndexOf(reqsArr, reqsItem) + 2];
+                                    if (isVariable("post." + name))
+                                    {
+                                        variables.Remove("post." + name);
+                                    }
+                                    variables.Add("post." + name, value);
+                                }
+                            }
+                        }
+                    }
+                    else
+                    {
+                        string[] eq = req.ContentEncoding.GetString(reqs).Split(new string[] { "\r\n" }, StringSplitOptions.None);
+                        foreach (string eqStr in eq)
+                        {
+                            string[] nd = eqStr.Split("=");
+                            if (nd != null)
+                            {
+                                if (isVariable("post." + nd[0]))
+                                {
+                                    variables.Remove(nd[0]);
+                                }
+                                variables.Add("post." + nd[0], HttpUtility.UrlDecode(nd[1]));
+                            }
+                        }
                     }
                 }
             }

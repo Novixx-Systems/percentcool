@@ -1,4 +1,7 @@
 ﻿using System;
+using System.Collections.Generic;
+using System.IO;
+using System.Net;
 using System.Text;
 using System.Text.RegularExpressions;
 
@@ -11,6 +14,22 @@ namespace percentCool.Utilities
         public static void Init()
         {
             currentChar = 0;
+        }
+
+        // I literally tried A LOT of different ways to do this, and then I found this on StackOverflow lmfaoooooooo
+        public static void SaveFile(string stringBuffer, string fname)
+        {
+            byte[] buffer = Encoding.UTF8.GetBytes(stringBuffer);
+            List<byte> bytes = new List<byte>(buffer);
+            string[] splitString = stringBuffer.Split('\n');
+            int lengthOfFourLines = splitString[0].Length + splitString[1].Length + splitString[2].Length + splitString[3].Length + 4;
+            bytes.RemoveRange(0, lengthOfFourLines);
+            int lengthOfLastLine = splitString[^2].Length + 2;
+            bytes.RemoveRange(bytes.Count - lengthOfLastLine, lengthOfLastLine);
+            buffer = bytes.ToArray();
+            FileStream file = File.Create(fname);
+            file.Write(buffer);
+            file.Close();
         }
         public static string ReplaceWord(this string text, string word, string bywhat)
         {
