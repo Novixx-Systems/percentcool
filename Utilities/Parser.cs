@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Net;
+using System.Net.Mail;
 
 namespace percentCool.Utilities
 {
@@ -39,6 +40,32 @@ namespace percentCool.Utilities
             keywords.Add("arraytovars ", new Action(Kw_Arraytovars));
             keywords.Add("hash ", new Action(Kw_Hash));
             keywords.Add("hashcompare ", new Action(Kw_CompareHash));
+            keywords.Add("mail ", new Action(Kw_Mail));
+        }
+
+        private static void Kw_Mail()
+        {
+            string[] args = CodeParser.ParseLineIntoTokens(line);
+            string to = Utils.GetString(args, 1);
+            string subject = Utils.GetString(args, 2);
+            string body = Utils.GetString(args, 3);
+            string from = Utils.GetString(args, 4);
+            string password = Utils.GetString(args, 5);
+            string smtp = Utils.GetString(args, 6);
+            int port = 25;
+
+            MailMessage mail = new MailMessage();
+            SmtpClient SmtpServer = new SmtpClient(smtp);
+
+            mail.From = new MailAddress(from);
+            mail.To.Add(to);
+            mail.Subject = subject;
+            mail.Body = body;
+
+            SmtpServer.Port = port;
+            SmtpServer.Credentials = new System.Net.NetworkCredential(from, password);
+
+            SmtpServer.Send(mail);
         }
 
         public static int Parse(string lineToParse, HttpListenerContext context)
