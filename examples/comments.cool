@@ -20,7 +20,7 @@ foreach $sqlresult
 
 	replace $i < &lt;
 	replace $i > &gt;
-	replace $i " &quot;
+	replace $i "\"" &quot;
 	
 	// Second step: display output
 
