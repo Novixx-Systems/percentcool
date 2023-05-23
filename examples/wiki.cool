@@ -1,0 +1,103 @@
+<%cool
+// CoolioWiki - A Wikipedia clone in percentCool
+// (c) 2023 Novixx Systems
+// THIS PROJECT IS MADE SO YOU CAN LEARN HOW TO MAKE A WEBSITE IN PERCENTCOOL
+
+sqlconnect "localhost" "database" "username" "password" 
+
+sqlquery SELECT id FROM pages
+
+foreach $sqlresult
+    $count = $i
+stoploop
+
+$pages = $count
+
+existing $url.page
+if $_EXISTS = true
+    escape $url.page
+    sqlquery SELECT content FROM pages WHERE name = '$url.page'
+    foreach $sqlresult
+        $content = $i
+    stoploop
+stopif
+%>
+<html>
+<head>
+<title>CoolioWiki</title>
+</head>
+<body>
+<h1>CoolioWiki</h1>
+<p>Welcome to CoolioWiki, the online encyclopedia that anyone can edit.</p>
+<p>There are currently 
+<%cool
+echo "$pages "
+%>
+ pages on this wiki.</p>
+<form method="get">
+<input type="text" name="search" placeholder="Search">
+<input type="submit" value="Search">
+</form>
+<%cool
+
+// Search
+existing $url.search
+if $_EXISTS = true
+    echo "<h2>Search results for $url.search</h2>"
+    // We need to escape the search query so we don't get SQL injection
+    escape $url.search
+    sqlquery SELECT COUNT(*) FROM pages WHERE name LIKE '%$url.search%'
+    foreach $sqlresult
+        $searchcount = $i
+    stoploop
+    echo "<p>Found $searchcount results.</p>"
+    if $searchcount = 0
+        echo "<p>No results found. <a href='?edit=$url.search'>Create this page?</a></p>"
+    stopif
+    sqlquery SELECT name FROM pages WHERE name LIKE '%$url.search%'
+    foreach $sqlresult
+        $searchresult = $i
+        echo "<a href='?page=$searchresult'>$searchresult</a><br>"
+    stoploop
+stopif
+
+// Check if the page parameter is set
+existing $url.page
+if $_EXISTS = true
+    echo "<h2>$url.page</h2>"
+    echo "<a href='?edit=$url.page&page=$url.page'>Edit</a>"
+    echo "<p>$content</p>"
+stopif
+existing $url.edit
+if $_EXISTS = true
+    echo "<h2>$url.edit</h2>"
+    echo "<form action='?save=$url.edit' method='post'>"
+    echo "<textarea name='content' rows='10' cols='80'>$content</textarea>"
+    echo "<br>"
+    echo "<input type='submit' value='Save'>"
+    echo "</form>"
+stopif
+existing $url.save
+if $_EXISTS = true
+    echo "<h2>$url.save</h2>"
+    echo "<p>Saved!</p>"
+    echo "<a href='?page=$url.save'>View</a>"
+    echo "<br>"
+    echo "<a href='?edit=$url.save'>Edit</a>"
+
+    // We need to put \n in quotes because percentCool doesn't support \n without quotes
+    // but percentCool does support writing strings without quotes
+    replace $post.content "\n" <br>
+
+	replace $i < &lt;
+	replace $i > &gt;
+	replace $i "\"" &quot;
+    escape $post.content
+    escape $url.save
+
+    sqlquery DELETE FROM pages WHERE name = '$url.save'
+    sqlquery INSERT INTO pages (name, content) VALUES ('$url.save', '$post.content')
+stopif
+%>
+</body>
+</html>
