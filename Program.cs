@@ -29,7 +29,7 @@ namespace percentCool
         public static int savedLoopInt = 0;
         public static Dictionary<string, string> variables = new();
         public static Dictionary<string, List<string>> arrays = new();
-        public static string version = "1.2";
+        public static string version = "1.2.1";
         public static HttpListener listener;
         public static string url = "http://*:8000/";
         public static int pageViews = 0;
