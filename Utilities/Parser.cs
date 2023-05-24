@@ -9,10 +9,11 @@ namespace percentCool.Utilities
 {
     internal class Parser
     {
-        public static int error = 0;
-        public static Dictionary<string, Action> keywords = new();
-        public static string line;
-        public static HttpListenerContext ctx;
+        private static int error = 0;
+        private static string line;
+        private static HttpListenerContext ctx;
+        
+        private readonly static Dictionary<string, Action> keywords = new();
 
         public static void Init()
         {
@@ -23,30 +24,56 @@ namespace percentCool.Utilities
             // NOTE: Most keywords MUST end with a space, operators
             // must NOT end with a space. Keywords that have no arguments
             // should also NOT end with a space.
-            //
-            keywords.Add("$=", new Action(Op_DollarEquals));
-            keywords.Add("$", new Action(Op_Dollar));
-            keywords.Add("echo ", new Action(Kw_Echo));
-            keywords.Add("rndmax ", new Action(Kw_Rndmax));
-            keywords.Add("sessionset ", new Action(Kw_Sessionset));
-            keywords.Add("sessionget ", new Action(Kw_Sessionget));
-            keywords.Add("newsession", new Action(Kw_Newsession));
-            keywords.Add("if ", new Action(Kw_If));
-            keywords.Add("getdate ", new Action(Kw_Getdate));
-            keywords.Add("foreach ", new Action(Kw_Foreach));
-            keywords.Add("sqlquery ", new Action(Kw_Sqlquery));
-            keywords.Add("escape ", new Action(Kw_Escape));
-            keywords.Add("replace ", new Action(Kw_Replace));
-            keywords.Add("sqlconnect ", new Action(Kw_Sqlconnect));
-            keywords.Add("arraytovars ", new Action(Kw_Arraytovars));
-            keywords.Add("hash ", new Action(Kw_Hash));
-            keywords.Add("hashcompare ", new Action(Kw_CompareHash));
-            keywords.Add("mail ", new Action(Kw_Mail));
-            keywords.Add("existing ", new Action(Kw_Existing));
-            keywords.Add("writefile ", new Action(Kw_Writefile));
-            keywords.Add("readfile ", new Action(Kw_Readfile));
-            keywords.Add("rmfile ", new Action(Kw_Rmfile));
-            keywords.Add("deletefile ", new Action(Kw_Rmfile)); // Alias for rmfile
+            
+            #region Operators
+            keywords.Add("$=",           Op_DollarEquals);
+            keywords.Add("$",            Op_Dollar);
+            #endregion
+
+            #region Utility Keywords
+            keywords.Add("echo ", Kw_Echo);
+            keywords.Add("rndmax ", Kw_Rndmax);
+            keywords.Add("existing ", Kw_Existing);
+            keywords.Add("escape ", Kw_Escape);
+            keywords.Add("replace ", Kw_Replace);
+            keywords.Add("arraytovars ", Kw_Arraytovars);
+            #endregion
+
+            #region Session Keywords
+            keywords.Add("sessionset ", Kw_Sessionset);
+            keywords.Add("sessionget ", Kw_Sessionget);
+            keywords.Add("newsession", Kw_Newsession);
+            #endregion
+
+            #region Control Flow Keywords
+            keywords.Add("if ", Kw_If);
+            keywords.Add("foreach ", Kw_Foreach);
+            #endregion
+
+            #region Date/Time Keywords
+            keywords.Add("getdate ", Kw_Getdate);
+            #endregion
+
+            #region SQL Keywords
+            keywords.Add("sqlquery ", Kw_Sqlquery);
+            keywords.Add("sqlconnect ", Kw_Sqlconnect);
+            #endregion
+
+            #region Crypto Keywords
+            keywords.Add("hash ", Kw_Hash);
+            keywords.Add("hashcompare ", Kw_CompareHash);
+            #endregion
+
+            #region Mail Keywords
+            keywords.Add("mail ", Kw_Mail);
+            #endregion
+
+            #region File System Keywords
+            keywords.Add("writefile ", Kw_Writefile);
+            keywords.Add("readfile ", Kw_Readfile);
+            keywords.Add("rmfile ", Kw_Rmfile);
+            keywords.Add("deletefile ", Kw_Rmfile); // Alias for rmfile
+            #endregion
         }
 
         private static void Kw_Readfile()
