@@ -70,29 +70,33 @@ namespace percentCool
         /// </summary>
         /// <param name="str">The string to make secure</param>
         /// <returns></returns>
-        public static string safeEscape(string str)
+        public static string SafeEscape(string str)
         {
             return Regex.Replace(str, @"[\x00'""\b\n\r\t\cZ\\%_]",
                 delegate (Match match)
                 {
-                    string v = match.Value;
-                    switch (v)
+                    return match.Value switch
                     {
-                        case "\x00":            // ASCII NUL (0x00) character
-                            return "\\0";
-                        case "\b":              // BACKSPACE character
-                            return "\\b";
-                        case "\n":              // NEWLINE (linefeed) character
-                            return "\\n";
-                        case "\r":              // CARRIAGE RETURN character
-                            return "\\r";
-                        case "\t":              // TAB
-                            return "\\t";
-                        case "\u001A":          // Ctrl-Z
-                            return "\\Z";
-                        default:
-                            return "\\" + v;
-                    }
+                        // ASCII NUL (0x00) character
+                        "\x00" => "\\0",
+                        
+                        // BACKSPACE character
+                        "\b" => "\\b",
+                        
+                        // NEWLINE (linefeed) character
+                        "\n" => "\\n",
+                        
+                        // CARRIAGE RETURN character
+                        "\r" => "\\r",
+                        
+                        // TAB
+                        "\t" => "\\t",
+                        
+                        // Ctrl-Z
+                        "\u001A" => "\\Z",
+                        
+                        _ => "\\" + match.Value,
+                    };
                 });
         }
         // Function from my old programming language GOOMBAServer
@@ -220,7 +224,7 @@ namespace percentCool
                     }
                     ret.Close();
 
-                    if (isArray("sqlresult"))
+                    if (IsArray("sqlresult"))
                     {
                         arrays.Remove("sqlresult");
                     }
@@ -280,7 +284,7 @@ namespace percentCool
         }
 
         // Check if a string is a variable name
-        public static bool isVariable(string name)
+        public static bool IsVariable(string name)
         {
             if (variables.ContainsKey(name))
             {
@@ -288,7 +292,8 @@ namespace percentCool
             }
             return false;
         }
-        public static bool isArray(string name)
+        
+        public static bool IsArray(string name)
         {
             if (arrays.ContainsKey(name))
             {
@@ -309,7 +314,7 @@ namespace percentCool
         public static string Format(string toFormat)
         {
             bool isEscaper = false; // Bool for checking if the escape character appeared
-            StringBuilder Output = new StringBuilder(new string(' ', 32768));
+            StringBuilder Output = new(new string(' ', 32768));
             int q = 0;
             foreach(char c in toFormat)
             {
@@ -330,7 +335,7 @@ namespace percentCool
                     }
                     else if (c == '~')
                     {
-                        Output = Output.Insert(q, random.Next(0, randMax).ToString());
+                        Output = Output.Insert(q, random.Next(0, randMax));
                     }
                     else if (c != '\\')
                     {
@@ -374,7 +379,7 @@ namespace percentCool
                 byte[] reqs = GetRequestPostData(req);
                 foreach (string item in req.QueryString)
                 {
-                    if (isVariable("url." + item))
+                    if (IsVariable("url." + item))
                     {
                         variables.Remove("url." + item);
                     }
@@ -409,7 +414,7 @@ namespace percentCool
                                     Console.ForegroundColor = ConsoleColor.White;
                                     string tempFileName = "atm_" + random.NextInt64(10101010101010, 99999999999999).ToString() + ".aks";
                                     Utils.SaveFile(req.ContentEncoding.GetString(reqs), tempFileName); // Save it
-                                    if (isVariable("post." + name))
+                                    if (IsVariable("post." + name))
                                     {
                                         variables.Remove("post." + name);
                                     }
@@ -418,7 +423,7 @@ namespace percentCool
                                 else
                                 {
                                     string value = reqsArr[Array.IndexOf(reqsArr, reqsItem) + 2];
-                                    if (isVariable("post." + name))
+                                    if (IsVariable("post." + name))
                                     {
                                         variables.Remove("post." + name);
                                     }
@@ -435,7 +440,7 @@ namespace percentCool
                             string[] nd = eqStr.Split("=");
                             if (nd != null)
                             {
-                                if (isVariable("post." + nd[0]))
+                                if (IsVariable("post." + nd[0]))
                                 {
                                     variables.Remove(nd[0]);
                                 }
@@ -496,7 +501,7 @@ namespace percentCool
                                 j -= savedLoopInt;
                                 j--;
                                 savedLoopInt = 0;
-                                if (isVariable("i"))
+                                if (IsVariable("i"))
                                 {
                                     variables.Remove("i");
                                 }
@@ -651,10 +656,8 @@ namespace percentCool
                 }
 
                 // Write the response info
-                if (data == null)
-                {
-                    data = Encoding.UTF8.GetBytes(pageData);
-                }
+                data ??= Encoding.UTF8.GetBytes(pageData);
+                
                 if (where == "html" || where == "cool")
                 {
                     resp.ContentType = "text/html";
@@ -683,7 +686,7 @@ namespace percentCool
                 resp.ContentLength64 = data.LongLength;
 
                 // Write out to the response stream (asynchronously), then close it
-                await resp.OutputStream.WriteAsync(data, 0, data.Length);
+                await resp.OutputStream.WriteAsync(data);
                 resp.Close();
             }
         }
