@@ -33,6 +33,7 @@ namespace percentCool.Utilities
             #region Utility Keywords
             keywords.Add("echo ", Kw_Echo);
             keywords.Add("rndmax ", Kw_Rndmax);
+            keywords.Add("random", Kw_Random);
             keywords.Add("existing ", Kw_Existing);
             keywords.Add("escape ", Kw_Escape);
             keywords.Add("replace ", Kw_Replace);
@@ -74,6 +75,26 @@ namespace percentCool.Utilities
             keywords.Add("rmfile ", Kw_Rmfile);
             keywords.Add("deletefile ", Kw_Rmfile); // Alias for rmfile
             #endregion
+        }
+
+        private static void Kw_Random()
+        {
+            string[] args = CodeParser.ParseLineIntoTokens(line);
+            string varname = "_RANDOM";
+
+            if (varname == string.Empty)
+            {
+                return;
+            }
+
+            if (Program.variables.ContainsKey(varname))
+            {
+                Program.variables[varname] = Program.random.Next(0, Program.randMax).ToString();
+            }
+            else
+            {
+                Program.variables.Add(varname, Program.random.Next(0, Program.randMax).ToString());
+            }
         }
 
         private static void Kw_Readfile()
