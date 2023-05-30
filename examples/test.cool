@@ -2,11 +2,11 @@
 // This sample echos the values in
 // the form (handled via post request), except for "dok"
 // If dok is lmao, it echoes aha.
-echo $ok
-if $dok = lmao
+echo $post.ok
+if $post.dok = lmao
 echo aha
 stopif
-echo $daok
+echo $post.daok
 %>
 <form method="post">
 <input type="text" name="ok">
