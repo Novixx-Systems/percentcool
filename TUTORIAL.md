@@ -33,7 +33,7 @@ For example, `|1,2,3|` is an array with the strings `1`, `2`, and `3`.
 # Keywords
 Oh, this will be a long one.
 
-## `echo`
+## echo
 `echo` is used to print text to the page. It takes one argument, which is the text to print.
 
 For example, `echo "Hello world!"` will print `Hello world!` to the page.
