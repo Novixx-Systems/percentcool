@@ -694,6 +694,18 @@ namespace percentCool
 
         public static void Main()
         {
+            // Check for file .cfg
+            if (System.IO.File.Exists(System.IO.Path.Combine(Environment.CurrentDirectory, "cool.cfg")))
+            {
+                string[] lines = System.IO.File.ReadAllLines(System.IO.Path.Combine(Environment.CurrentDirectory, "cool.cfg"));
+                foreach (string line in lines)
+                {
+                    if (line.StartsWith("url="))
+                    {
+                        url = line[4..];
+                    }
+                }
+            }
             Console.WriteLine("percentCool version " + version);
             if (!System.IO.Directory.Exists(System.IO.Path.Combine(Environment.CurrentDirectory, "www")))
             {
