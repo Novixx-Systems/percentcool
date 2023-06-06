@@ -75,6 +75,59 @@ namespace percentCool.Utilities
             keywords.Add("rmfile ", Kw_Rmfile);
             keywords.Add("deletefile ", Kw_Rmfile); // Alias for rmfile
             #endregion
+
+            #region Web Keywords
+            keywords.Add("urldecode ", Kw_Urldecode);
+            keywords.Add("urlencode ", Kw_Urlencode);
+            #endregion
+        }
+
+        // Urldecode and urlencode take a variable name and a value
+        // and encode/decode the value and store it in the variable
+        public static void Kw_Urlencode()
+        {
+            string[] args = CodeParser.ParseLineIntoTokens(line);
+            string varname = args[1];
+            string value = Utils.GetString(args, 2);
+
+            if (varname == string.Empty || value == string.Empty || !varname.StartsWith("$"))
+            {
+                return;
+            }
+
+            varname = varname[1..];
+
+            if (Program.variables.ContainsKey(varname))
+            {
+                Program.variables[varname] = WebUtility.UrlEncode(value) ?? string.Empty;
+            }
+            else
+            {
+                Program.variables.Add(varname, WebUtility.UrlEncode(value) ?? string.Empty);
+            }
+        }
+
+        public static void Kw_Urldecode()
+        {
+            string[] args = CodeParser.ParseLineIntoTokens(line);
+            string varname = args[1];
+            string value = Utils.GetString(args, 2);
+
+            if (varname == string.Empty || value == string.Empty || !varname.StartsWith("$"))
+            {
+                return;
+            }
+
+            varname = varname[1..];
+
+            if (Program.variables.ContainsKey(varname))
+            {
+                Program.variables[varname] = WebUtility.UrlDecode(value);
+            }
+            else
+            {
+                Program.variables.Add(varname, WebUtility.UrlDecode(value));
+            }
         }
 
         private static void Kw_Random()
