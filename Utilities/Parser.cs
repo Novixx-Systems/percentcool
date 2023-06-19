@@ -74,6 +74,7 @@ namespace percentCool.Utilities
             keywords.Add("readfile ", Kw_Readfile);
             keywords.Add("rmfile ", Kw_Rmfile);
             keywords.Add("deletefile ", Kw_Rmfile); // Alias for rmfile
+            keywords.Add("appendfile ", Kw_Appendfile);
             #endregion
 
             #region Web Keywords
@@ -163,6 +164,20 @@ namespace percentCool.Utilities
             {
                 Program.variables["_FILE"] = System.IO.File.ReadAllText(filename);
             }
+        }
+
+        private static void Kw_Appendfile()
+        {
+            string[] args = CodeParser.ParseLineIntoTokens(line);
+            string filename = Utils.GetString(args, 1);
+            string content = Utils.GetString(args, 2);
+
+            if (filename == string.Empty || content == string.Empty)
+            {
+                return;
+            }
+
+            System.IO.File.AppendAllText(filename, content);
         }
 
         private static void Kw_Rmfile()
