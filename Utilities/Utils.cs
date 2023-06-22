@@ -31,6 +31,7 @@ namespace percentCool.Utilities
             file.Write(buffer);
             file.Close();
         }
+        //TODO add comment what this is used for
         public static string ReplaceWord(this string text, string word, string bywhat)
         {
             static bool IsWordChar(char c) => char.IsLetterOrDigit(c) || c == '_' || c == '$';
