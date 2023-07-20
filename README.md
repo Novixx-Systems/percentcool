@@ -1,4 +1,7 @@
-[![Build](https://github.com/Novixx-Systems/percentcool/actions/workflows/dotnet.yml/badge.svg?branch=main)](https://github.com/Novixx-Systems/percentcool/actions/workflows/dotnet.yml)
+# ARCHIVED
+percentCool has been archived, because it was too buggy to be a webserver, instead, use Eaucool (almost 100% compatible with percentCool)
+
+https://github.com/Novixx-Systems/Eaucool
 
 
 # Note
