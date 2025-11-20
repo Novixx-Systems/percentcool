@@ -5,7 +5,9 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Net;
+using System.Net.Http;
 using System.Net.Mail;
+using System.Web;
 
 namespace percentCool.Utilities
 {
@@ -38,6 +40,7 @@ namespace percentCool.Utilities
             keywords.Add("random", Kw_Random);
             keywords.Add("existing ", Kw_Existing);
             keywords.Add("escape ", Kw_Escape);
+            keywords.Add("sanitize ", Kw_Sanitize);
             keywords.Add("replace ", Kw_Replace);
             keywords.Add("arraytovars ", Kw_Arraytovars);
             #endregion
@@ -107,6 +110,30 @@ namespace percentCool.Utilities
             else
             {
                 requ.variables.Add(varname, WebUtility.UrlEncode(value) ?? string.Empty);
+            }
+        }
+
+        public static void Kw_Sanitize(Request requ)
+        {
+            string[] args = CodeParser.ParseLineIntoTokens(line);
+            string varname = args[1];
+            string value = Utils.GetString(args, requ, 2);
+
+
+            if (varname == string.Empty || value == string.Empty || !varname.StartsWith("$"))
+            {
+                return;
+            }
+
+            varname = varname[1..];
+
+            if (requ.variables.ContainsKey(varname))
+            {
+                requ.variables[varname] = HttpUtility.HtmlEncode(value) ?? string.Empty;
+            }
+            else
+            {
+                requ.variables.Add(varname, HttpUtility.HtmlEncode(value));
             }
         }
 
@@ -436,6 +463,7 @@ namespace percentCool.Utilities
                     return;
                 }
                 List<string> sessionvalues = System.IO.File.ReadLines(System.IO.Path.Combine(Program.sessionpath, ctx.Request.Cookies["session"].Value)).ToList();
+                sessionvalues.Reverse();
                 if (sessionvalues.Count > 0)
                 {
                     if (Program.IsVariable("_SESSIONGET", requ))

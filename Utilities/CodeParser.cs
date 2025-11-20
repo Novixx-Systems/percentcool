@@ -30,7 +30,7 @@ namespace percentCool.Utilities
                 {
                     if(isReadingString) {
                         temp = temp.Replace("\\n", "\n");
-                        if (temp != string.Empty) tokens.Add(temp);
+                        tokens.Add(temp);
                         temp = "";
                         isReadingString = false;
                     }
