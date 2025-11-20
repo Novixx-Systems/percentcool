@@ -1,6 +1,8 @@
 ﻿using Org.BouncyCastle.Asn1;
+using Org.BouncyCastle.Ocsp;
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Net;
 using System.Net.Mail;
@@ -13,7 +15,7 @@ namespace percentCool.Utilities
         private static string line;
         private static HttpListenerContext ctx;
         
-        private readonly static Dictionary<string, Action> keywords = new();
+        private readonly static Dictionary<string, Action<Request>> keywords = new();
 
         public static void Init()
         {
@@ -85,11 +87,11 @@ namespace percentCool.Utilities
 
         // Urldecode and urlencode take a variable name and a value
         // and encode/decode the value and store it in the variable
-        public static void Kw_Urlencode()
+        public static void Kw_Urlencode(Request requ)
         {
             string[] args = CodeParser.ParseLineIntoTokens(line);
             string varname = args[1];
-            string value = Utils.GetString(args, 2);
+            string value = Utils.GetString(args, requ, 2);
 
             if (varname == string.Empty || value == string.Empty || !varname.StartsWith("$"))
             {
@@ -98,21 +100,21 @@ namespace percentCool.Utilities
 
             varname = varname[1..];
 
-            if (Program.variables.ContainsKey(varname))
+            if (requ.variables.ContainsKey(varname))
             {
-                Program.variables[varname] = WebUtility.UrlEncode(value) ?? string.Empty;
+                requ.variables[varname] = WebUtility.UrlEncode(value) ?? string.Empty;
             }
             else
             {
-                Program.variables.Add(varname, WebUtility.UrlEncode(value) ?? string.Empty);
+                requ.variables.Add(varname, WebUtility.UrlEncode(value) ?? string.Empty);
             }
         }
 
-        public static void Kw_Urldecode()
+        public static void Kw_Urldecode(Request requ)
         {
             string[] args = CodeParser.ParseLineIntoTokens(line);
             string varname = args[1];
-            string value = Utils.GetString(args, 2);
+            string value = Utils.GetString(args, requ, 2);
 
             if (varname == string.Empty || value == string.Empty || !varname.StartsWith("$"))
             {
@@ -121,17 +123,17 @@ namespace percentCool.Utilities
 
             varname = varname[1..];
 
-            if (Program.variables.ContainsKey(varname))
+            if (requ.variables.ContainsKey(varname))
             {
-                Program.variables[varname] = WebUtility.UrlDecode(value);
+                requ.variables[varname] = WebUtility.UrlDecode(value);
             }
             else
             {
-                Program.variables.Add(varname, WebUtility.UrlDecode(value));
+                requ.variables.Add(varname, WebUtility.UrlDecode(value));
             }
         }
 
-        private static void Kw_Random()
+        private static void Kw_Random(Request requ)
         {
             string[] args = CodeParser.ParseLineIntoTokens(line);
             string varname = "_RANDOM";
@@ -141,20 +143,20 @@ namespace percentCool.Utilities
                 return;
             }
 
-            if (Program.variables.ContainsKey(varname))
+            if (requ.variables.ContainsKey(varname))
             {
-                Program.variables[varname] = Program.random.Next(0, Program.randMax).ToString();
+                requ.variables[varname] = Program.random.Next(0, requ.randMax).ToString();
             }
             else
             {
-                Program.variables.Add(varname, Program.random.Next(0, Program.randMax).ToString());
+                requ.variables.Add(varname, Program.random.Next(0, requ.randMax).ToString());
             }
         }
 
-        private static void Kw_Readfile()
+        private static void Kw_Readfile(Request requ)
         {
             string[] args = CodeParser.ParseLineIntoTokens(line);
-            string filename = Utils.GetString(args, 1);
+            string filename = Utils.GetString(args, requ, 1);
 
             if (filename == string.Empty)
             {
@@ -162,15 +164,15 @@ namespace percentCool.Utilities
             }
             if (System.IO.File.Exists(filename))
             {
-                Program.variables["_FILE"] = System.IO.File.ReadAllText(filename);
+                requ.variables["_FILE"] = System.IO.File.ReadAllText(filename);
             }
         }
 
-        private static void Kw_Appendfile()
+        private static void Kw_Appendfile(Request requ)
         {
             string[] args = CodeParser.ParseLineIntoTokens(line);
-            string filename = Utils.GetString(args, 1);
-            string content = Utils.GetString(args, 2);
+            string filename = Utils.GetString(args, requ, 1);
+            string content = Utils.GetString(args, requ, 2);
 
             if (filename == string.Empty || content == string.Empty)
             {
@@ -180,10 +182,10 @@ namespace percentCool.Utilities
             System.IO.File.AppendAllText(filename, content);
         }
 
-        private static void Kw_Rmfile()
+        private static void Kw_Rmfile(Request requ)
         {
             string[] args = CodeParser.ParseLineIntoTokens(line);
-            string filename = Utils.GetString(args, 1);
+            string filename = Utils.GetString(args, requ, 1);
 
             if (filename == string.Empty)
             {
@@ -195,11 +197,11 @@ namespace percentCool.Utilities
             }
         }
 
-        private static void Kw_Writefile()
+        private static void Kw_Writefile(Request requ)
         {
             string[] args = CodeParser.ParseLineIntoTokens(line);
-            string filename = Utils.GetString(args, 1);
-            string content = Utils.GetString(args, 2);
+            string filename = Utils.GetString(args, requ, 1);
+            string content = Utils.GetString(args, requ, 2);
 
             if (filename == string.Empty || content == string.Empty)
             {
@@ -209,7 +211,7 @@ namespace percentCool.Utilities
             System.IO.File.WriteAllText(filename, content);
         }
 
-        private static void Kw_Existing()
+        private static void Kw_Existing(Request requ)
         {
             // This is a special keyword that is used to check if a variable exists
 
@@ -220,39 +222,39 @@ namespace percentCool.Utilities
             }
             varName = varName.Substring(1); // Remove the $ from the name
 
-            if (Program.variables.ContainsKey(varName))
+            if (requ.variables.ContainsKey(varName))
             {
-                if (Program.variables.ContainsKey("_EXISTS"))
+                if (requ.variables.ContainsKey("_EXISTS"))
                 {
-                    Program.variables["_EXISTS"] = "true";
+                    requ.variables["_EXISTS"] = "true";
                 }
                 else
                 {
-                    Program.variables.Add("_EXISTS", "true");
+                    requ.variables.Add("_EXISTS", "true");
                 }
             }
             else
             {
-                if (Program.variables.ContainsKey("_EXISTS"))
+                if (requ.variables.ContainsKey("_EXISTS"))
                 {
-                    Program.variables["_EXISTS"] = "false";
+                    requ.variables["_EXISTS"] = "false";
                 }
                 else
                 {
-                    Program.variables.Add("_EXISTS", "false");
+                    requ.variables.Add("_EXISTS", "false");
                 }
             }
         }
 
-        private static void Kw_Mail()
+        private static void Kw_Mail(Request requ)
         {
             string[] args = CodeParser.ParseLineIntoTokens(line);
-            string to = Utils.GetString(args, 1);
-            string subject = Utils.GetString(args, 2);
-            string body = Utils.GetString(args, 3);
-            string from = Utils.GetString(args, 4);
-            string password = Utils.GetString(args, 5);
-            string smtp = Utils.GetString(args, 6);
+            string to = Utils.GetString(args, requ, 1);
+            string subject = Utils.GetString(args, requ, 2);
+            string body = Utils.GetString(args, requ, 3);
+            string from = Utils.GetString(args, requ, 4);
+            string password = Utils.GetString(args, requ, 5);
+            string smtp = Utils.GetString(args, requ, 6);
             int port = 25;
 
             MailMessage mail = new MailMessage();
@@ -269,7 +271,7 @@ namespace percentCool.Utilities
             SmtpServer.Send(mail);
         }
 
-        public static int Parse(string lineToParse, HttpListenerContext context)
+        public static int Parse(string lineToParse, HttpListenerContext context, Request requ)
         {
             Utils.Init();
             line = lineToParse;
@@ -281,7 +283,7 @@ namespace percentCool.Utilities
                 if (line.StartsWith(keyword.Key))
                 {
                     i++;
-                    keyword.Value();        // We can call this since it's an action
+                    keyword.Value(requ);        // We can call this since it's an action
                     if (error == 1)
                     {
                         return 0;
@@ -297,52 +299,52 @@ namespace percentCool.Utilities
         }
 
         #region Operators
-        public static void Op_DollarEquals()
+        public static void Op_DollarEquals(Request requ)
         {
             string[] args = CodeParser.ParseLineIntoTokens(line);
 
             Utils.currentChar = 2;
-            Program.FormattedPrint(Utils.GetString(args, 1));
+            Program.FormattedPrint(Utils.GetString(args, requ, 1), requ);
         }
-        public static void Op_Dollar()
+        public static void Op_Dollar(Request requ)
         {
             if (line.Contains("@=="))
             {
-                if (Program.IsArray(line[1..].Split("@==")[0].Replace(" ", "").Replace(Special.specialChars[(int)Special.SpecialCharacters.array], "")))   // If it's an array
+                if (Program.IsArray(line[1..].Split("@==")[0].Replace(" ", "").Replace(Special.specialChars[(int)Special.SpecialCharacters.array], ""), requ))   // If it's an array
                 {
-                    Program.arrays[line[1..].Split("@==")[0].Replace(" ", "").Replace(Special.specialChars[(int)Special.SpecialCharacters.array], "")].Add(line.Split("@==")[1].TrimStart()); // Insert into array
+                    requ.arrays[line[1..].Split("@==")[0].Replace(" ", "").Replace(Special.specialChars[(int)Special.SpecialCharacters.array], "")].Add(line.Split("@==")[1].TrimStart()); // Insert into array
                 }
-                if (Program.IsVariable(line[1..].Split("@==")[0].Replace(" ", "")))
+                if (Program.IsVariable(line[1..].Split("@==")[0].Replace(" ", ""), requ))
                 {
-                    Program.variables.Remove(line[1..].Split("@==")[0].Replace(" ", ""));
+                    requ.variables.Remove(line[1..].Split("@==")[0].Replace(" ", ""));
                 }
-                Program.variables.Add(line[1..].Split("@==")[0].Replace(" ", ""), Program.Format(line.Split("@==")[1].TrimStart()));
+                requ.variables.Add(line[1..].Split("@==")[0].Replace(" ", ""), Program.Format(line.Split("@==")[1].TrimStart(), requ));
                 goto endOfDefine;
             }
             else if (line.Contains("="))        // Array or variable
             {
-                if (Program.IsArray(line[1..].Split("=")[0].Replace(" ", "").Replace(Special.specialChars[(int)Special.SpecialCharacters.array], "")))
+                if (Program.IsArray(line[1..].Split("=")[0].Replace(" ", "").Replace(Special.specialChars[(int)Special.SpecialCharacters.array], ""), requ))
                 {
-                    Program.arrays.Remove(line[1..].Split("=")[0].Replace(" ", "").Replace(Special.specialChars[(int)Special.SpecialCharacters.array], ""));
+                    requ.arrays.Remove(line[1..].Split("=")[0].Replace(" ", "").Replace(Special.specialChars[(int)Special.SpecialCharacters.array], ""));
                 }
-                if (Program.IsVariable(line[1..].Split("=")[0].Replace(" ", "").Replace("{", "")))
+                if (Program.IsVariable(line[1..].Split("=")[0].Replace(" ", "").Replace("{", ""), requ))
                 {
-                    Program.variables.Remove(line[1..].Split("=")[0].Replace(" ", "").Replace("{", ""));
+                    requ.variables.Remove(line[1..].Split("=")[0].Replace(" ", "").Replace("{", ""));
                 }
                 if (line[1..].Split("=")[1].Replace(" ", "").StartsWith(Special.specialChars[(int)Special.SpecialCharacters.array]))
                 {
-                    Program.arrays.Add(line[1..].Split("=")[0].Replace(" ", ""), new List<string>(line[1..].Split(Special.specialChars[(int)Special.SpecialCharacters.array])[1].Split(",")));
+                    requ.arrays.Add(line[1..].Split("=")[0].Replace(" ", ""), new List<string>(line[1..].Split(Special.specialChars[(int)Special.SpecialCharacters.array])[1].Split(",")));
                     goto endOfDefine;
                 }
                 if (line[1..].Split("=")[1].Replace(" ", "").StartsWith("$"))           // Variable -> Variable
                 {
-                    if (Program.IsVariable(line[1..].Replace(" ", "").Split("=")[1][1..]))
+                    if (Program.IsVariable(line[1..].Replace(" ", "").Split("=")[1][1..], requ))
                     {
-                        Program.variables.Add(line[1..].Split("=")[0].Replace(" ", ""), Program.variables[line[1..].Replace(" ", "").Split("=")[1][1..]]);
+                        requ.variables.Add(line[1..].Split("=")[0].Replace(" ", ""), requ.variables[line[1..].Replace(" ", "").Split("=")[1][1..]]);
                         goto endOfDefine;
                     }
                 }
-                Program.variables.Add(line[1..].Split("=")[0].Replace(" ", ""), line.Split("=")[1].TrimStart());
+                requ.variables.Add(line[1..].Split("=")[0].Replace(" ", ""), line.Split("=")[1].TrimStart());
             }
             else
             {
@@ -354,15 +356,15 @@ namespace percentCool.Utilities
         }
         #endregion
         #region Keywords
-        public static void Kw_Echo()
+        public static void Kw_Echo(Request requ)
         {
             string[] args = CodeParser.ParseLineIntoTokens(line);
 
             Utils.currentChar = 5;
-            Program.pageData += Utils.GetString(args, 1);
+            Program.pageData += Utils.GetString(args, requ, 1);
         }
 
-        public static void Kw_Rndmax()
+        public static void Kw_Rndmax(Request requ)
         {
             string[] args = CodeParser.ParseLineIntoTokens(line);
 
@@ -371,96 +373,96 @@ namespace percentCool.Utilities
                 Utils.currentChar = 7;
                 try
                 {
-                    Program.randMax = int.Parse(Utils.GetString(args, 1));
+                    requ.randMax = int.Parse(Utils.GetString(args, requ, 1));
                 }
                 catch
                 {
-                    Program.randMax = Utils.defaultReturnValue;
+                    requ.randMax = Utils.defaultReturnValue;
                 }
             }
             else
             {
-                Program.randMax = Utils.defaultReturnValue;
+                requ.randMax = Utils.defaultReturnValue;
             }
         }
 
-        public static void Kw_Hash()
+        public static void Kw_Hash(Request requ)
         {
             string[] args = CodeParser.ParseLineIntoTokens(line);
-            string target = Utils.GetString(args, 1, true);
+            string target = Utils.GetString(args, requ, 1, true);
 
-            Program.variables.Add("_HASH", BCrypt.Net.BCrypt.HashPassword(target));
+            requ.variables.Add("_HASH", BCrypt.Net.BCrypt.HashPassword(target));
         }
 
-        public static void Kw_CompareHash()
+        public static void Kw_CompareHash(Request requ)
         {
             string[] args = CodeParser.ParseLineIntoTokens(line);
-            string hash = Utils.GetString(args, 1, true);
-            string password = Utils.GetString(args, 2, true);
+            string hash = Utils.GetString(args, requ, 1, true);
+            string password = Utils.GetString(args, requ, 2, true);
 
-            Program.variables.Add("_HASHVALID", BCrypt.Net.BCrypt.Verify(password, hash) ? "true" : "false");
+            requ.variables.Add("_HASHVALID", BCrypt.Net.BCrypt.Verify(password, hash) ? "true" : "false");
         }
 
-        public static void Kw_Sessionset()
+        public static void Kw_Sessionset(Request requ)
         {
             string[] args = CodeParser.ParseLineIntoTokens(line);
 
             if (args.Length > 2)
             {
-                if (ctx.Response.Cookies["session"] == null)
+                if (ctx.Request.Cookies["session"] == null)
                 {
                     Program.Error("Session not set. Use newsession to create a session");
                     error = 1;
                     return;
                 }
-                List<string> sessionvalues = System.IO.File.ReadLines(System.IO.Path.Combine(Program.sessionpath, ctx.Response.Cookies["session"].Value)).Where(l => l.StartsWith(args[1])).ToList();
+                List<string> sessionvalues = System.IO.File.ReadLines(System.IO.Path.Combine(Program.sessionpath, ctx.Request.Cookies["session"].Value)).Where(l => l.StartsWith(args[1])).ToList();
                 Utils.currentChar = 11 + args[1].Length;
-                sessionvalues.Add(args[1] + ":" + Utils.GetString(args, 2));
-                System.IO.File.WriteAllLines(System.IO.Path.Combine(Program.sessionpath, ctx.Response.Cookies["session"].Value), sessionvalues);
+                sessionvalues.Add(args[1] + ":" + Utils.GetString(args, requ, 2));
+                System.IO.File.WriteAllLines(System.IO.Path.Combine(Program.sessionpath, ctx.Request.Cookies["session"].Value), sessionvalues);
 
             }
         }
 
-        public static void Kw_Sessionget()
+        public static void Kw_Sessionget(Request requ)
         {
             string[] args = CodeParser.ParseLineIntoTokens(line);
 
             if (args.Length > 1)
             {
-                if (ctx.Response.Cookies["session"] == null)
+                if (ctx.Request.Cookies["session"] == null)
                 {
                     Program.Error("Session not set. Use newsession to create a session");
                     error = 1;
                     return;
                 }
-                List<string> sessionvalues = System.IO.File.ReadLines(System.IO.Path.Combine(Program.sessionpath, ctx.Response.Cookies["session"].Value)).ToList();
+                List<string> sessionvalues = System.IO.File.ReadLines(System.IO.Path.Combine(Program.sessionpath, ctx.Request.Cookies["session"].Value)).ToList();
                 if (sessionvalues.Count > 0)
                 {
-                    if (Program.IsVariable("_SESSIONGET"))
+                    if (Program.IsVariable("_SESSIONGET", requ))
                     {
-                        Program.variables.Remove("_SESSIONGET");
+                        requ.variables.Remove("_SESSIONGET");
                     }
                     List<string> resultList = sessionvalues.Where(r => r.StartsWith(args[1])).ToList();
-                    Program.variables.Add("_SESSIONGET", resultList[0][(resultList[0].Split(":")[0].Length + 2)..]);
+                    requ.variables.Add("_SESSIONGET", resultList[0][(resultList[0].Split(":")[0].Length + 1)..]);
                 }
                 else
                 {
-                    if (Program.IsVariable("_SESSIONGET"))
+                    if (Program.IsVariable("_SESSIONGET", requ))
                     {
-                        Program.variables.Remove("_SESSIONGET");
+                        requ.variables.Remove("_SESSIONGET");
                     }
-                    Program.variables.Add("_SESSIONGET", "");
+                    requ.variables.Add("_SESSIONGET", "");
                 }
             }
         }
-        public static void Kw_Newsession()
+        public static void Kw_Newsession(Request requ)
         {
 
-            if (!Program.cookies.ContainsKey(ctx.Request.RemoteEndPoint.ToString()))
+            if (!requ.cookies.ContainsKey(ctx.Request.RemoteEndPoint.ToString()))
             {
-                if (ctx.Response.Cookies["session"] != null)
+                if (ctx.Request.Cookies["session"] != null && File.Exists(System.IO.Path.Combine(Program.sessionpath, ctx.Request.Cookies["session"].Value)))
                 {
-                    System.IO.File.Delete(System.IO.Path.Combine(Program.sessionpath, ctx.Response.Cookies["session"].Value));      // Try to delete old session
+                    return;
                 }
                 string session = Program.NewString(32);
                 while (System.IO.File.Exists(System.IO.Path.Combine(Program.sessionpath, session)))
@@ -470,36 +472,37 @@ namespace percentCool.Utilities
                 ctx.Response.Cookies.Clear();
                 Cookie cookie = new Cookie("session", session)
                 {
+                    Path = "/",
                     Expires = DateTime.Now.AddDays(2)
                 };
                 ctx.Response.Cookies.Add(cookie);
-                Program.cookies.Remove(ctx.Request.RemoteEndPoint.ToString());
+                requ.cookies.Remove(ctx.Request.RemoteEndPoint.ToString());
 
-                Program.cookies.Add(ctx.Request.RemoteEndPoint.ToString(), cookie);
+                requ.cookies.Add(ctx.Request.RemoteEndPoint.ToString(), cookie);
                 System.IO.File.Create(System.IO.Path.Combine(Program.sessionpath, ctx.Response.Cookies["session"].Value)).Close();
             }
 
-            if (!Program.IsVariable("_ISSESSION"))
+            if (!Program.IsVariable("_ISSESSION", requ))
             {
-                Program.variables.Add("_ISSESSION", "yes");
+                requ.variables.Add("_ISSESSION", "yes");
             }
 
         }
 
-        public static void Kw_If()
+        public static void Kw_If(Request requ)
         {
 
             if (line.Contains("="))
             {
                 string toCheck = line[3..].Split("=")[0].TrimEnd();        // Just some stuff that makes
                                                                            // it contain the first argument
-                if (line.Substring(3, 1) == "$" && Program.IsVariable(line[4..].Split("=")[0].Trim()))
+                if (line.Substring(3, 1) == "$" && Program.IsVariable(line[4..].Split("=")[0].Trim(), requ))
                 {
-                    Program.variables.TryGetValue(line[4..].Split("=")[0].TrimEnd(), out string varcont);
+                    requ.variables.TryGetValue(line[4..].Split("=")[0].TrimEnd(), out string varcont);
                     toCheck = varcont;
                 }
                 string secondCheck = line[3..].Split("=")[1].TrimStart();        // The thing to compare to
-                if (line.Split("=")[1].Trim() == "NULL" && !Program.IsVariable(line[4..].Split("=")[0].Trim()))
+                if (line.Split("=")[1].Trim() == "NULL" && !Program.IsVariable(line[4..].Split("=")[0].Trim(), requ))
                 {
                     toCheck = null;
                     secondCheck = null;
@@ -508,34 +511,34 @@ namespace percentCool.Utilities
                 {
                     secondCheck = "";
                 }
-                if (line.Split("=")[1].Trim()[..1] == "$" && Program.IsVariable(line[4..].Split("=")[1].Trim()[1..]))
+                if (line.Split("=")[1].Trim()[..1] == "$" && Program.IsVariable(line[4..].Split("=")[1].Trim()[1..], requ))
                 {
-                    Program.variables.TryGetValue(line[4..].Split("=")[1].Trim()[1..], out string varcont);
+                    requ.variables.TryGetValue(line[4..].Split("=")[1].Trim()[1..], out string varcont);
                     secondCheck = varcont;
                 }
                 if (toCheck != secondCheck)
                 {
-                    Program.skipIfStmtElse = true;
+                    requ.skipIfStmtElse = true;
                 }
                 else
                 {
-                    Program.skipElseStmt = true;
+                    requ.skipElseStmt = true;
                 }
             }
         }
-        public static void Kw_Getdate()
+        public static void Kw_Getdate(Request requ)
         {
             string[] args = CodeParser.ParseLineIntoTokens(line);
             if (args.Length > 1)
             {
-                if (Program.IsVariable(args[1]))
+                if (Program.IsVariable(args[1], requ))
                 {
-                    Program.variables.Remove(args[1]);
+                    requ.variables.Remove(args[1]);
                 }
-                Program.variables.Add(args[1], DateTime.UtcNow.ToString("yyyy-MM-dd"));
+                requ.variables.Add(args[1], DateTime.UtcNow.ToString("yyyy-MM-dd"));
             }
         }
-        public static void Kw_Foreach()
+        public static void Kw_Foreach(Request requ)
         {
             string[] args = CodeParser.ParseLineIntoTokens(line);
 
@@ -543,20 +546,20 @@ namespace percentCool.Utilities
             {
                 if (args[1][..1] == "$") // Check if it's a variable
                 {
-                    if (Program.IsArray(args[1][1..]))
+                    if (Program.IsArray(args[1][1..], requ))
                     {
                         Program.loopThrough = args[1];
-                        if (Program.arrays[Program.loopThrough[1..]].Count > 0)
+                        if (requ.arrays[Program.loopThrough[1..]].Count > 0)
                         {
                             Program.loopCount = 0;
 
                             Program.inLoop = true;
 
-                            if (Program.IsVariable("i"))
+                            if (Program.IsVariable("i", requ))
                             {
-                                Program.variables.Remove("i");
+                                requ.variables.Remove("i");
                             }
-                            Program.variables.Add("i", Program.arrays[Program.loopThrough[1..]][Program.loopCount]);
+                            requ.variables.Add("i", requ.arrays[Program.loopThrough[1..]][Program.loopCount]);
                         }
                     }
                     else
@@ -574,11 +577,11 @@ namespace percentCool.Utilities
                 }
             }
         }
-        public static void Kw_Sqlquery()
+        public static void Kw_Sqlquery(Request requ)
         {
-            if (Program.database != null) // If connected
+            if (requ.database != null) // If connected
             {
-                Program.Query(line[9..]);
+                Program.Query(line[9..], requ);
             }
             else
             {
@@ -587,13 +590,13 @@ namespace percentCool.Utilities
                 return;
             }
         }
-        public static void Kw_Escape()
+        public static void Kw_Escape(Request requ)
         {
             string[] args = CodeParser.ParseLineIntoTokens(line);
 
             if (args.Length > 1 && args[1][0] == '$')
             {
-                Program.variables[args[1][1..]] = Program.SafeEscape(Program.variables[args[1][1..]]);
+                requ.variables[args[1][1..]] = Program.SafeEscape(requ.variables[args[1][1..]]);
             }
             else
             {
@@ -602,14 +605,14 @@ namespace percentCool.Utilities
                 return;
             }
         }
-        public static void Kw_Replace()
+        public static void Kw_Replace(Request requ)
         {
             string[] args = CodeParser.ParseLineIntoTokens(line);
             if (args.Length > 3 && args[1][0] == '$')
             {
-                if (Program.IsVariable(args[1][1..]))
+                if (Program.IsVariable(args[1][1..], requ))
                 {
-                    Program.variables[args[1][1..]] = Program.variables[args[1][1..]].Replace(args[2], args[3]);
+                    requ.variables[args[1][1..]] = requ.variables[args[1][1..]].Replace(args[2], args[3]);
                 }
             }
             else
@@ -619,7 +622,7 @@ namespace percentCool.Utilities
                 return;
             }
         }
-        public static void Kw_Sqlconnect()  // Create a new connection
+        public static void Kw_Sqlconnect(Request requ)  // Create a new connection
         {
             string[] args = CodeParser.ParseLineIntoTokens(line);
             if (args.Length != 5)
@@ -628,28 +631,28 @@ namespace percentCool.Utilities
                 error = 1;
                 return;
             }
-            Program.InitializeSQL(args[1], args[2], args[3], args[4]);
+            Program.InitializeSQL(args[1], args[2], args[3], args[4], requ);
         }
 
         // Convert arrays to variables, an array containing "abc, a" will
         // make two variables called $a1 and $a2, $a1 contains abc and $a2 contains a
-        public static void Kw_Arraytovars()
+        public static void Kw_Arraytovars(Request requ)
         {
             string[] args = CodeParser.ParseLineIntoTokens(line);
 
             if (args[1].StartsWith("$"))
             {
-                if (Program.IsArray(args[1][1..]))
+                if (Program.IsArray(args[1][1..], requ))
                 {
                     int thing = 0;
-                    foreach (string value in Program.arrays[args[1][1..]])
+                    foreach (string value in requ.arrays[args[1][1..]])
                     {
                         thing++;
-                        if (Program.IsVariable("a" + thing.ToString()))
+                        if (Program.IsVariable("a" + thing.ToString(), requ))
                         {
-                            Program.variables.Remove("a" + thing.ToString());
+                            requ.variables.Remove("a" + thing.ToString());
                         }
-                        Program.variables.Add("a" + thing.ToString(), value);
+                        requ.variables.Add("a" + thing.ToString(), value);
                     }
                 }
                 else

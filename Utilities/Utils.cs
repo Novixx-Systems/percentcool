@@ -1,4 +1,5 @@
-﻿using System;
+﻿using Org.BouncyCastle.Ocsp;
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Net;
@@ -52,7 +53,7 @@ namespace percentCool.Utilities
             sb.Append(text, p, text.Length - p);
             return sb.ToString();
         }
-        public static string GetString(string[] args, int arg = 0, bool noSpace = true)
+        public static string GetString(string[] args, Request requ, int arg = 0, bool noSpace = true)
         {
             string returnValue;
             try
@@ -64,9 +65,9 @@ namespace percentCool.Utilities
             {
                 returnValue = "";
             }
-            foreach (string var in Program.variables.Keys)
+            foreach (string var in requ.variables.Keys)
             {
-                returnValue = returnValue.ReplaceWord("$" + var, (noSpace ? "" : " ") + Program.variables[var]);
+                returnValue = returnValue.ReplaceWord("$" + var, (noSpace ? "" : " ") + requ.variables[var]);
             }
             return returnValue;
         }

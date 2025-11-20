@@ -1,49 +1,36 @@
 ﻿// copyright (c) 2023 Novixx Systems
 
 
+using MySql.Data.MySqlClient;
+using Org.BouncyCastle.Ocsp;
+using percentCool.Utilities;
 using System;
 using System.Collections.Generic;
+using System.Globalization;
+using System.IO;
+using System.Linq;
 using System.Net;
 using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
-using MySql.Data.MySqlClient;
-using System.Linq;
 using System.Web;
-using percentCool.Utilities;
-using System.Globalization;
-using System.IO;
 
 namespace percentCool
 {
     internal static class Program
     {
         public static Random random = new();
-        public static bool skipIfStmtElse = false;
-        public static bool skipElseStmt = false;
-        public static bool skipElseStmtB = false;
         public static string sessionpath;
         public static bool inLoop = false;
         public static string loopThrough;
         public static int loopCount = 0;
         public static int savedLoopInt = 0;
-        public static Dictionary<string, string> variables = new();
-        public static Dictionary<string, List<string>> arrays = new();
+
         public static string version = "1.2.1";
         public static HttpListener listener;
         public static string url = "http://*:8000/";
         public static int pageViews = 0;
         public static ulong requestCount = 0;
-        public static int randMax = 10;
-        public static bool doingPercent = false;
-        public static string where = "";
-        public static string server;
-        public static string database;
-        public static string uid;
-        public static string password;
-        public static MySqlConnection connection;
-        public static List<string> vs1 = new();
-        public static Dictionary<string, Cookie> cookies = new();
 
         static int i;       // For line numbers in errors, and arrays.
 
@@ -100,16 +87,16 @@ namespace percentCool
                 });
         }
         // Function from my old programming language GOOMBAServer
-        public static void InitializeSQL(string host, string db, string user, string pass)
+        public static void InitializeSQL(string host, string db, string user, string pass, Request requ)
         {
-            server = host;
-            database = db;
-            uid = user;
-            password = pass;
+            requ.server = host;
+            requ.database = db;
+            requ.uid = user;
+            requ.password = pass;
             string connectionString;
-            connectionString = "SERVER=" + server + ";" + "DATABASE=" +
-            database + ";" + "UID=" + uid + ";" + "PASSWORD=" + password + ";";
-            connection = new MySqlConnection(connectionString);
+            connectionString = "SERVER=" + requ.server + ";" + "DATABASE=" +
+            requ.database + ";" + "UID=" + requ.uid + ";" + "PASSWORD=" + requ.password + ";";
+            requ.connection = new MySqlConnection(connectionString);
         }
         /// <summary>
         /// Check if source is a multiple of multiple
@@ -133,11 +120,11 @@ namespace percentCool
             return request.ContentEncoding.GetBytes(reader.ReadToEnd());
         }
         //open connection to database
-        private static bool OpenConnection()
+        private static bool OpenConnection(Request requ)
         {
             try
             {
-                connection.Open();
+                requ.connection.Open();
                 return true;
             }
             catch (MySqlException ex)
@@ -160,11 +147,11 @@ namespace percentCool
             }
         }
         //Close connection
-        public static bool CloseConnection()
+        public static bool CloseConnection(Request requ)
         {
             try
             {
-                connection.Close();
+                requ.connection.Close();
                 return true;
             }
             catch
@@ -173,20 +160,20 @@ namespace percentCool
             }
         }
         //Query
-        public static string[] Query(string cmad)
+        public static string[] Query(string cmad, Request requ)
         {
 
             Console.WriteLine("Query Started.");
             string query = cmad;
-            for (int i = 0; i < variables.Values.Count; i++)
+            for (int i = 0; i < requ.variables.Values.Count; i++)
             {
-                query = query.Replace("$" + variables.ElementAt(i).Key, variables.ElementAt(i).Value);
+                query = query.Replace("$" + requ.variables.ElementAt(i).Key, requ.variables.ElementAt(i).Value);
             }
 
             if (query.ToUpper().StartsWith("SELECT"))
             {
                 //Open connection
-                if (OpenConnection() == true)
+                if (OpenConnection(requ) == true)
                 {
                     string[] forSelect = query.Split(' ');
                     Console.WriteLine("Open");
@@ -196,19 +183,19 @@ namespace percentCool
                         //Assign the query using CommandText
                         CommandText = query,
                         //Assign the connection using Connection
-                        Connection = connection
+                        Connection = requ.connection
                     };
 
                     //Execute query
                     var ret = cmd.ExecuteReader();
                     var i = -1;
-                    vs1.Clear();
+                    requ.vs1.Clear();
                     if (forSelect[1] != "*")        // Check if its a wildcard
                     {
                         while (ret.Read())
                         {
                             i++;
-                            vs1.Add(ret[forSelect[1]].ToString());
+                            requ.vs1.Add(ret[forSelect[1]].ToString());
                         }
                     }
                     else
@@ -218,25 +205,25 @@ namespace percentCool
                             for (var f = 0; f < ret.FieldCount; f++)
                             {
                                 i++;
-                                vs1.Add(ret[ret.GetName(f)].ToString());
+                                requ.vs1.Add(ret[ret.GetName(f)].ToString());
                             }
                         }
                     }
                     ret.Close();
 
-                    if (IsArray("sqlresult"))
+                    if (IsArray("sqlresult", requ))
                     {
-                        arrays.Remove("sqlresult");
+                        requ.arrays.Remove("sqlresult");
                     }
-                    arrays.Add("sqlresult", vs1);
-                    connection.Close();
+                    requ.arrays.Add("sqlresult", requ.vs1);
+                    requ.connection.Close();
                     return null;
                 }
             }
             else
             {
                 //Open connection
-                if (OpenConnection() == true)
+                if (OpenConnection(requ) == true)
                 {
                     Console.WriteLine("Open");
                     //create mysql command
@@ -245,7 +232,7 @@ namespace percentCool
                         //Assign the query using CommandText
                         CommandText = query,
                         //Assign the connection using Connection
-                        Connection = connection
+                        Connection = requ.connection
                     };
 
                     //Execute query
@@ -258,7 +245,7 @@ namespace percentCool
                         Error("An error occured with the SQL statement");
 
                     }
-                    connection.Close();
+                    requ.connection.Close();
                     return null;
 
                 }
@@ -284,34 +271,34 @@ namespace percentCool
         }
 
         // Check if a string is a variable name
-        public static bool IsVariable(string name)
+        public static bool IsVariable(string name, Request requ)
         {
-            if (variables.ContainsKey(name))
+            if (requ.variables.ContainsKey(name))
             {
                 return true;
             }
             return false;
         }
         
-        public static bool IsArray(string name)
+        public static bool IsArray(string name, Request requ)
         {
-            if (arrays.ContainsKey(name))
+            if (requ.arrays.ContainsKey(name))
             {
                 return true;
             }
             return false;
         }
 
-        public static void FormattedPrint(string toPrint)
+        public static void FormattedPrint(string toPrint, Request requ)
         {
-            pageData += Format(toPrint);
+            pageData += Format(toPrint, requ);
         }
         /// <summary>
         /// Formats a string using a weird formatting thing
         /// </summary>
         /// <param name="toFormat">The string to format</param>
         /// <returns></returns>
-        public static string Format(string toFormat)
+        public static string Format(string toFormat, Request requ)
         {
             bool isEscaper = false; // Bool for checking if the escape character appeared
             StringBuilder Output = new(new string(' ', 32768));
@@ -335,7 +322,7 @@ namespace percentCool
                     }
                     else if (c == '~')
                     {
-                        Output = Output.Insert(q, random.Next(0, randMax));
+                        Output = Output.Insert(q, random.Next(0, requ.randMax));
                     }
                     else if (c != '\\')
                     {
@@ -351,21 +338,21 @@ namespace percentCool
             return Output.ToString().Trim();
         }
         // Parse COOL code
-        public static void ParseCOOL(string code, HttpListenerRequest req, HttpListenerContext ctx, bool included)
+        public static void ParseCOOL(string code, HttpListenerRequest req, HttpListenerContext ctx, bool included, Request requ)
         {
             if (!included)
             {
-                foreach (Cookie cookie in cookies.Values)
+                foreach (Cookie cookie in requ.cookies.Values)
                 {
                     if (cookie.Expires <= DateTime.Now)
                     {
-                        foreach (var item in cookies.Where(kvp => kvp.Value == cookie).ToList())
+                        foreach (var item in requ.cookies.Where(kvp => kvp.Value == cookie).ToList())
                         {
-                            cookies.Remove(item.Key);
+                            requ.cookies.Remove(item.Key);
                             continue;
                         }
                     }
-                    foreach (var item in cookies.Where(kvp => kvp.Value == cookie).ToList())
+                    foreach (var item in requ.cookies.Where(kvp => kvp.Value == cookie).ToList())
                     {
                         if (ctx.Request.RemoteEndPoint.ToString() == item.Key)
                         {
@@ -373,17 +360,17 @@ namespace percentCool
                         }
                     }
                 }
-                variables.Add("_TIME", DateTime.UtcNow.ToString("hh:mm:ss"));
-                variables.Add("_DATE", DateTime.UtcNow.ToString("yyyy-MM-dd"));
-                doingPercent = false;
+                requ.variables.Add("_TIME", DateTime.UtcNow.ToString("hh:mm:ss"));
+                requ.variables.Add("_DATE", DateTime.UtcNow.ToString("yyyy-MM-dd"));
+                requ.doingPercent = false;
                 byte[] reqs = GetRequestPostData(req);
                 foreach (string item in req.QueryString)
                 {
-                    if (IsVariable("url." + item))
+                    if (IsVariable("url." + item, requ))
                     {
-                        variables.Remove("url." + item);
+                        requ.variables.Remove("url." + item);
                     }
-                    variables.Add("url." + item, HttpUtility.UrlDecode(req.QueryString[item]));
+                    requ.variables.Add("url." + item, HttpUtility.UrlDecode(req.QueryString[item]));
                 }
                 if (reqs != null)                       // Get post request into variable
                 {
@@ -414,37 +401,37 @@ namespace percentCool
                                     Console.ForegroundColor = ConsoleColor.White;
                                     string tempFileName = "atm_" + random.NextInt64(10101010101010, 99999999999999).ToString() + ".aks";
                                     Utils.SaveFile(req.ContentEncoding.GetString(reqs), tempFileName); // Save it
-                                    if (IsVariable("post." + name))
+                                    if (IsVariable("post." + name, requ))
                                     {
-                                        variables.Remove("post." + name);
+                                        requ.variables.Remove("post." + name);
                                     }
-                                    variables.Add("post." + name, tempFileName);
+                                    requ.variables.Add("post." + name, tempFileName);
                                 }
                                 else
                                 {
                                     string value = reqsArr[Array.IndexOf(reqsArr, reqsItem) + 2];
-                                    if (IsVariable("post." + name))
+                                    if (IsVariable("post." + name, requ))
                                     {
-                                        variables.Remove("post." + name);
+                                        requ.variables.Remove("post." + name);
                                     }
-                                    variables.Add("post." + name, value);
+                                    requ.variables.Add("post." + name, value);
                                 }
                             }
                         }
                     }
                     else
                     {
-                        string[] eq = req.ContentEncoding.GetString(reqs).Split(new string[] { "\r\n" }, StringSplitOptions.None);
+                        string[] eq = req.ContentEncoding.GetString(reqs).Split(new string[] { "&" }, StringSplitOptions.None);
                         foreach (string eqStr in eq)
                         {
                             string[] nd = eqStr.Split("=");
                             if (nd != null)
                             {
-                                if (IsVariable("post." + nd[0]))
+                                if (IsVariable("post." + nd[0], requ))
                                 {
-                                    variables.Remove(nd[0]);
+                                    requ.variables.Remove(nd[0]);
                                 }
-                                variables.Add("post." + nd[0], HttpUtility.UrlDecode(nd[1]));
+                                requ.variables.Add("post." + nd[0], HttpUtility.UrlDecode(nd[1]));
                             }
                         }
                     }
@@ -452,45 +439,19 @@ namespace percentCool
             }
             bool firstPercent;
             int ifs = 1;
-            skipIfStmtElse = false;
+            requ.skipIfStmtElse = false;
             for (var j = 0; j < code.Split(new char[] { '\n' }).Length; j++)
             {
                 i++;
                 string line = code.Split(new char[] { '\n' })[j].Replace("\r", "").Replace("\t", " ").Trim();
                 line = Regex.Replace(line, @"\s+", " ");
-                if (skipIfStmtElse)
-                {
-                    if (doingPercent)
-                    {
-                        if (line.StartsWith("if "))
-                        {
-                            ifs += 1;
-                        }
-                        if (line == "else")
-                        {
-                            if (ifs <= 0)
-                            {
-                                skipIfStmtElse = false; // endif
-                            }
-                        }
-                        else if (line == "stopif")
-                        {
-                            ifs--;
-                            if (ifs <= 0)
-                            {
-                                skipIfStmtElse = false; // endif
-                            }
-                        }
-                    }
-                    continue;
-                }
                 if (inLoop)
                 {
-                    if (doingPercent)
+                    if (requ.doingPercent)
                     {
                         if (line == "stoploop")
                         {
-                            if (loopCount >= arrays[loopThrough[1..]].Count - 1)
+                            if (loopCount >= requ.arrays[loopThrough[1..]].Count - 1)
                             {
                                 inLoop = false;
                                 savedLoopInt = 0;
@@ -501,11 +462,11 @@ namespace percentCool
                                 j -= savedLoopInt;
                                 j--;
                                 savedLoopInt = 0;
-                                if (IsVariable("i"))
+                                if (IsVariable("i", requ))
                                 {
-                                    variables.Remove("i");
+                                    requ.variables.Remove("i");
                                 }
-                                variables.Add("i", arrays[loopThrough[1..]][loopCount]);
+                                requ.variables.Add("i", requ.arrays[loopThrough[1..]][loopCount]);
                             }
                         }
                         else
@@ -514,21 +475,21 @@ namespace percentCool
                         }
                     }
                 }
-                if (skipElseStmt)
+                if (requ.skipElseStmt)
                 {
-                    if (doingPercent)
+                    if (requ.doingPercent)
                     {
                         if (line == "else")
                         {
-                            skipElseStmtB = true;
+                            requ.skipElseStmtB = true;
                         }
                         if (line == "stopif")
                         {
-                            skipElseStmtB = false;
-                            skipElseStmt = false;
+                            requ.skipElseStmtB = false;
+                            requ.skipElseStmt = false;
                         }
                     }
-                    if (skipElseStmtB)
+                    if (requ.skipElseStmtB)
                     {
                         continue;
                     }
@@ -540,10 +501,10 @@ namespace percentCool
                 firstPercent = false;
                 if (line.StartsWith("<%cool"))
                 {
-                    doingPercent = true;            // Enter percent mode
+                    requ.doingPercent = true;            // Enter percent mode
                     firstPercent = true;
                 }
-                if (doingPercent && !firstPercent)              // If we are in percent mode...
+                if (requ.doingPercent && !firstPercent)              // If we are in percent mode...
                 {
                     if (line.StartsWith("//"))
                     {
@@ -562,7 +523,7 @@ namespace percentCool
                     {
                         if (System.IO.File.Exists(line[8..]))
                         {
-                            ParseCOOL(System.IO.File.ReadAllText(line[8..]), req, ctx, true);
+                            ParseCOOL(System.IO.File.ReadAllText(line[8..]), req, ctx, true, requ);
                         }
                         else
                         {
@@ -571,21 +532,51 @@ namespace percentCool
                     }
                     else if (line.StartsWith("%>"))
                     {
-                        doingPercent = false;
+                        requ.doingPercent = false;
                     }
-                    else
+                    else if (!requ.skipIfStmtElse)
                     {
-                        int t = Parser.Parse(line, ctx);
+                        int t = Parser.Parse(line, ctx, requ);
                         if (t == 2)
                         {
                             Error("Unknown statement " + line);
                             return;
+                        }
+                        if (requ.skipIfStmtElse)
+                        {
+                            ifs = -1;
                         }
                     }
                 }
                 else
                 {
                     if (!firstPercent) pageData += line + "\n";
+                }
+                if (requ.skipIfStmtElse)
+                {
+                    if (requ.doingPercent)
+                    {
+                        if (line.StartsWith("if "))
+                        {
+                            ifs += 1;
+                        }
+                        if (line == "else")
+                        {
+                            if (ifs <= 0)
+                            {
+                                requ.skipIfStmtElse = false; // endif
+                            }
+                        }
+                        else if (line == "stopif")
+                        {
+                            ifs--;
+                            if (ifs <= 0)
+                            {
+                                requ.skipIfStmtElse = false; // endif
+                            }
+                        }
+                    }
+                    continue;
                 }
             }
         }
@@ -599,8 +590,8 @@ namespace percentCool
             {
                 i = 0;
                 byte[] data = null;
-                variables.Clear();
-                randMax = 0;
+                Request requ = new Request();
+                requ.randMax = 0;
                 // Will wait here until we hear from a connection
                 HttpListenerContext ctx = await listener.GetContextAsync();
 
@@ -626,11 +617,11 @@ namespace percentCool
                 {
                     try
                     {
-                        where = req.Url.AbsolutePath[1..].Split(".")[1];
-                        if (where == "html" || where == "cool")
+                        requ.where = req.Url.AbsolutePath[1..].Split(".")[1];
+                        if (requ.where == "html" || requ.where == "cool")
                         {
                             pageData = "";
-                            ParseCOOL(System.IO.File.ReadAllText(req.Url.AbsolutePath[1..]), req, ctx, false);
+                            ParseCOOL(System.IO.File.ReadAllText(req.Url.AbsolutePath[1..]), req, ctx, false, requ);
                         }
                         else
                         {
@@ -644,37 +635,37 @@ namespace percentCool
                     if (System.IO.File.Exists(System.IO.Path.Combine(Environment.CurrentDirectory, req.Url.AbsolutePath[1..], "index.cool")))
                     {
                         pageData = "";
-                        ParseCOOL(System.IO.File.ReadAllText(System.IO.Path.Combine(Environment.CurrentDirectory, req.Url.AbsolutePath[1..], "index.cool")), req, ctx, false);
-                        where = "cool";
+                        ParseCOOL(System.IO.File.ReadAllText(System.IO.Path.Combine(Environment.CurrentDirectory, req.Url.AbsolutePath[1..], "index.cool")), req, ctx, false, requ);
+                        requ.where = "cool";
                     }
                     else if (System.IO.File.Exists(System.IO.Path.Combine(Environment.CurrentDirectory, req.Url.AbsolutePath[1..], "index.html")))
                     {
                         pageData = "";
-                        ParseCOOL(System.IO.File.ReadAllText(System.IO.Path.Combine(Environment.CurrentDirectory, req.Url.AbsolutePath[1..], "index.html")), req, ctx, false);
-                        where = "html";
+                        ParseCOOL(System.IO.File.ReadAllText(System.IO.Path.Combine(Environment.CurrentDirectory, req.Url.AbsolutePath[1..], "index.html")), req, ctx, false, requ);
+                        requ.where = "html";
                     }
                 }
 
                 // Write the response info
                 data ??= Encoding.UTF8.GetBytes(pageData);
                 
-                if (where == "html" || where == "cool")
+                if (requ.where == "html" || requ.where == "cool")
                 {
                     resp.ContentType = "text/html";
                 }
-                else if (where == "png")
+                else if (requ.where == "png")
                 {
                     resp.ContentType = "image/png";
                 }
-                else if (where == "jpg" || where == "jpeg")
+                else if (requ.where == "jpg" || requ.where == "jpeg")
                 {
                     resp.ContentType = "image/jpeg";
                 }
-                else if (where == "mp3")
+                else if (requ.where == "mp3")
                 {
                     resp.ContentType = "audio/mpeg";
                 }
-                else if (where == "exe" || where == "zip" || where == "7z" || where == "rar" || where == "apk" || where == "dll")
+                else if (requ.where == "exe" || requ.where == "zip" || requ.where == "7z" || requ.where == "rar" || requ.where == "apk" || requ.where == "dll")
                 {
                     resp.ContentType = "application/octet-stream";
                 }
