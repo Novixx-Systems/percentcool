@@ -67,7 +67,12 @@ namespace percentCool.Utilities
 
             #region Crypto Keywords
             keywords.Add("hash ", Kw_Hash);
+            keywords.Add("bcrypthash ", Kw_Hash);
             keywords.Add("hashcompare ", Kw_CompareHash);
+            keywords.Add("numleadingzerobits ", Kw_NumZeroBits);
+            keywords.Add("md5hash ", Kw_Md5Hash);
+            keywords.Add("sha1hash ", Kw_Sha1Hash);
+            keywords.Add("sha256hash ", Kw_Sha256Hash);
             #endregion
 
             #region Mail Keywords
@@ -111,6 +116,64 @@ namespace percentCool.Utilities
             {
                 requ.variables.Add(varname, WebUtility.UrlEncode(value) ?? string.Empty);
             }
+        }
+
+        public static void Kw_Md5Hash(Request requ)
+        {
+            string[] args = CodeParser.ParseLineIntoTokens(line);
+            string target = Utils.GetString(args, requ, 1, true);
+            using (var md5 = System.Security.Cryptography.MD5.Create())
+            {
+                byte[] inputBytes = System.Text.Encoding.UTF8.GetBytes(target);
+                byte[] hashBytes = md5.ComputeHash(inputBytes);
+                requ.variables.Add("_HASH", BitConverter.ToString(hashBytes).Replace("-", "").ToLower());
+            }
+        }
+
+        public static void Kw_Sha1Hash(Request requ)
+        {
+            string[] args = CodeParser.ParseLineIntoTokens(line);
+            string target = Utils.GetString(args, requ, 1, true);
+            using (var sha1 = System.Security.Cryptography.SHA1.Create())
+            {
+                byte[] inputBytes = System.Text.Encoding.UTF8.GetBytes(target);
+                byte[] hashBytes = sha1.ComputeHash(inputBytes);
+                requ.variables.Add("_HASH", BitConverter.ToString(hashBytes).Replace("-", "").ToLower());
+            }
+        }
+
+        public static void Kw_Sha256Hash(Request requ)
+        {
+            string[] args = CodeParser.ParseLineIntoTokens(line);
+            string target = Utils.GetString(args, requ, 1, true);
+            using (var sha256 = System.Security.Cryptography.SHA256.Create())
+            {
+                byte[] inputBytes = System.Text.Encoding.UTF8.GetBytes(target);
+                byte[] hashBytes = sha256.ComputeHash(inputBytes);
+                requ.variables.Add("_HASH", BitConverter.ToString(hashBytes).Replace("-", "").ToLower());
+            }
+        }
+
+        public static void Kw_NumZeroBits(Request requ)
+        {
+            string[] args = CodeParser.ParseLineIntoTokens(line);
+            string varname = args[1];
+            string value = Utils.GetString(args, requ, 2);
+            if (varname == string.Empty || value == string.Empty || !varname.StartsWith("$"))
+            {
+                return;
+            }
+            // Count the number of zero bits in the value (first convert from hex to binary)
+            // check if value is a valid hex string
+            bool isHex = value.All(c => Uri.IsHexDigit(c));
+            if (!isHex || value.Length % 2 != 0)
+            {
+                requ.variables["_NUMZEROBITS"] = "0";
+                return;
+            }
+            string binary = string.Join(string.Empty, value.Select(c => Convert.ToString(Convert.ToInt32(c.ToString(), 16), 2).PadLeft(4, '0')));
+            int count = binary.TakeWhile(c => c == '0').Count();
+            requ.variables["_NUMZEROBITS"] = count.ToString();
         }
 
         public static void Kw_Sanitize(Request requ)

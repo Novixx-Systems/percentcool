@@ -29,7 +29,6 @@ namespace percentCool
         public static string version = "1.2.1";
         public static HttpListener listener;
         public static string url = "http://*:8000/";
-        public static int pageViews = 0;
         public static ulong requestCount = 0;
 
         static int i;       // For line numbers in errors, and arrays.
